@@ -34,8 +34,8 @@
   <a href="stock-bolsas.html">📦 Bolsas</a>
   <a href="accesorios.html" class="activo">🧸 Accesorios</a>
   <a href="lista-precios.html">💲 Precios</a>
-  <a href="ventas.html">📋 Ventas</a>
-  <a href="venta-local.html">🏪 Local</a>
+  <a href="vender.html">🛒 Vender</a>
+  <a href="ventas.html">📋 Historial</a>
 </nav>
 
 <div class="container">
@@ -133,20 +133,45 @@
           </div>
         </div>
       </div>
-      <div class="form-fila">
-        <div class="form-grupo">
-          <label>Costo ($)</label>
-          <input type="number" id="acc-costo" min="0" step="0.01" placeholder="0">
+
+      <!-- Switch variantes -->
+      <div class="form-grupo" style="background:#f0f4ff;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:12px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin:0;font-weight:600">
+          <input type="checkbox" id="acc-tiene-variantes" onchange="toggleVariantes()"
+            style="width:18px;height:18px;cursor:pointer">
+          ¿Este producto tiene variantes (pesos / tamaños)?
+        </label>
+        <small style="color:#666;font-weight:400">Ej: pastillas 4-10 kg, 10-25 kg…</small>
+      </div>
+
+      <!-- Campos para producto SIMPLE -->
+      <div id="campos-simples">
+        <div class="form-fila">
+          <div class="form-grupo">
+            <label>Costo ($)</label>
+            <input type="number" id="acc-costo" min="0" step="0.01" placeholder="0">
+          </div>
+          <div class="form-grupo">
+            <label>Precio de venta ($)</label>
+            <input type="number" id="acc-precio" min="0" step="0.01" placeholder="0">
+          </div>
         </div>
         <div class="form-grupo">
-          <label>Precio de venta ($)</label>
-          <input type="number" id="acc-precio" min="0" step="0.01" placeholder="0">
+          <label>Stock inicial</label>
+          <input type="number" id="acc-stock" min="0" value="0">
         </div>
       </div>
-      <div class="form-grupo">
-        <label>Stock inicial</label>
-        <input type="number" id="acc-stock" min="0" value="0">
+
+      <!-- Campos para producto CON VARIANTES -->
+      <div id="campos-variantes" style="display:none">
+        <p style="font-size:13px;color:#555;margin:4px 0 8px">
+          Agregá cada variante con su propio precio y stock:
+        </p>
+        <div id="variantes-lista"></div>
+        <button type="button" class="btn btn-outline" onclick="agregarRenglonVariante()"
+          style="width:100%;margin-top:4px">+ Añadir variante</button>
       </div>
+
       <div class="form-acciones">
         <button type="button" class="btn btn-outline" onclick="cerrarModal('modal-acc-nuevo')">Cancelar</button>
         <button type="submit" class="btn btn-verde">Guardar</button>
@@ -236,37 +261,3 @@
           </select>
         </div>
         <div class="form-grupo">
-          <label>Marca</label>
-          <input type="text" id="edit-marca">
-        </div>
-      </div>
-      <div class="form-fila">
-        <div class="form-grupo">
-          <label>Costo ($)</label>
-          <input type="number" id="edit-costo" min="0" step="0.01">
-        </div>
-        <div class="form-grupo">
-          <label>Precio de venta ($)</label>
-          <input type="number" id="edit-precio" min="0" step="0.01">
-        </div>
-      </div>
-      <div class="form-acciones">
-        <button type="button" class="btn btn-outline" onclick="cerrarModal('modal-editar-acc')">Cancelar</button>
-        <button type="submit" class="btn btn-verde">Guardar cambios</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-
-<!-- ===== SCRIPTS ===== -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-<script src="js/firebase-config.js?v=3"></script>
-<script src="js/utils.js?v=3"></script>
-<script src="js/audio.js?v=3"></script>
-<script src="js/accesorios.js?v=3"></script>
-<script src="js/nav-mobile.js?v=3"></script>
-
-</body>
-</html>

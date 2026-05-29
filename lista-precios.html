@@ -228,7 +228,8 @@
   <a href="stock-bolsas.html">📦 Bolsas</a>
   <a href="accesorios.html">🧸 Accesorios</a>
   <a href="lista-precios.html" class="activo">💲 Precios</a>
-  <a href="ventas.html">📋 Ventas</a>
+  <a href="vender.html">🛒 Vender</a>
+  <a href="ventas.html">📋 Historial</a>
 </nav>
 
 <div class="container">
@@ -480,8 +481,4 @@
     const marcas = [...new Set(snap.docs.map(d => d.data().marca))].sort();
     dl.innerHTML = marcas.map(m => `<option value="${m}">`).join('');
   }
-  document.addEventListener('DOMContentLoaded', cargarMarcasSugeridas);
-</script>
-
-</body>
-</html>
+  document.addEventListener('DOMContentLoaded', cargarMa

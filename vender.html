@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vender — Pet Stock</title>
+  <link rel="stylesheet" href="css/styles.css?v=4">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Overrides para convivir con styles.css */
+    body { background: #f1f5f9; }
+
+    /* Resultado del buscador flotante */
+    #resultados-busqueda {
+      position: absolute;
+      left: 0; right: 0;
+      top: calc(100% + 4px);
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.12);
+      z-index: 200;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .resultado-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background .1s;
+    }
+    .resultado-item:last-child { border-bottom: none; }
+    .resultado-item:hover { background: #f8fafc; }
+    .resultado-nombre { font-size: 14px; font-weight: 600; color: #1e293b; }
+    .resultado-detalle { font-size: 12px; color: #64748b; margin-top: 1px; }
+    .resultado-precio { font-size: 14px; font-weight: 700; color: #16a34a; white-space: nowrap; }
+    .resultado-sin-stock { opacity: .45; pointer-events: none; }
+    .badge-tipo {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 8px;
+      text-transform: uppercase;
+      margin-right: 6px;
+    }
+    .badge-bolsa { background: #fef9c3; color: #854d0e; }
+    .badge-acc   { background: #dbeafe; color: #1d4ed8; }
+
+    /* Carrito */
+    #carrito-lista { min-height: 80px; }
+    .carrito-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      background: white;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.07);
+    }
+    .ci-nombre { font-size: 14px; font-weight: 600; color: #1e293b; }
+    .ci-detalle { font-size: 12px; color: #64748b; }
+    .ci-controles {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .ci-btn {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: 1.5px solid #cbd5e1;
+      background: white;
+      font-size: 16px;
+      font-weight: 700;
+      color: #475569;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .1s;
+    }
+    .ci-btn:hover { background: #f1f5f9; border-color: #94a3b8; }
+    .ci-btn.eliminar { color: #ef4444; border-color: #fecaca; }
+    .ci-btn.eliminar:hover { background: #fef2f2; }
+    .ci-cant { font-size: 15px; font-weight: 700; min-width: 20px; text-align: center; }
+    .ci-subtotal { font-size: 13px; font-weight: 700; color: #16a34a; white-space: nowrap; }
+
+    /* Carrito vacío */
+    #carrito-vacio {
+      text-align: center;
+      padding: 32px 0;
+      color: #94a3b8;
+      font-size: 14px;
+    }
+
+    /* Barra total fija abajo */
+    #barra-confirmar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: white;
+      border-top: 1px solid #e2e8f0;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      z-index: 100;
+      box-shadow: 0 -4px 16px rgba(0,0,0,.08);
+    }
+    #barra-confirmar .total-label { font-size: 13px; color: #64748b; }
+    #barra-confirmar .total-valor { font-size: 22px; font-weight: 800; color: #16a34a; }
+    #btn-confirmar {
+      background: #16a34a;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 13px 24px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background .15s;
+    }
+    #btn-confirmar:hover  { background: #15803d; }
+    #btn-confirmar:active { background: #166534; }
+    #btn-confirmar:disabled { background: #cbd5e1; cursor: not-allowed; }
+
+    /* Cierre Pet Shop (colapsable) */
+    #cierre-body {
+      display: none;
+      margin-top: 12px;
+    }
+    #cierre-body.abierto { display: block; }
+    #toggle-cierre { cursor: pointer; user-select: none; }
+
+    /* Espacio para que el contenido no quede debajo de la barra fija */
+    .pb-barra { padding-bottom: 90px; }
+
+    /* Toast de confirmación */
+    #toast {
+      position: fixed;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1e293b;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity .25s, transform .25s;
+      z-index: 300;
+      white-space: nowrap;
+    }
+    #toast.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAVEGACIÓN -->
+<nav>
+  <a class="logo" href="index.html">🐾 Pet Stock</a>
+  <a href="stock-bolsas.html">📦 Bolsas</a>
+  <a href="accesorios.html">🧸 Accesorios</a>
+  <a href="lista-precios.html">💲 Precios</a>
+  <a href="vender.html" class="activo">🛒 Vender</a>
+  <a href="ventas.html">📋 Historial</a>
+</nav>
+
+<div class="container pb-barra">
+
+  <!-- BUSCADOR -->
+  <div class="page-header" style="margin-bottom:16px">
+    <h1>🛒 Vender</h1>
+  </div>
+
+  <div style="position:relative; margin-bottom: 20px;" id="wrap-busqueda">
+    <input
+      type="search"
+      id="input-busqueda"
+      placeholder="Buscar producto o accesorio..."
+      autocomplete="off"
+      style="
+        width: 100%;
+        padding: 13px 16px 13px 42px;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 12px;
+        font-size: 15px;
+        background: white url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2218%22 height=%2218%22 fill=%22%2394a3b8%22 viewBox=%220 0 16 16%22><path d=%22M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.099zm-5.242 1.406a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z%22/></svg>') no-repeat 14px center;
+        box-shadow: 0 1px 4px rgba(0,0,0,.06);
+        box-sizing: border-box;
+      "
+    >
+    <!-- Resultados flotantes -->
+    <div id="resultados-busqueda" style="display:none"></div>
+  </div>
+
+  <!-- CARRITO -->
+  <div style="margin-bottom: 16px;">
+    <div style="font-size:13px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px;">
+      Carrito <span id="carrito-count" style="color:#16a34a"></span>
+    </div>
+
+    <div id="carrito-lista">
+      <div id="carrito-vacio">
+        🛒 Buscá un producto para agregarlo al carrito
+      </div>
+    </div>
+  </div>
+
+  <!-- CIERRE DIARIO PET SHOP -->
+  <div style="background:white; border-radius:12px; padding:14px 16px; box-shadow:0 1px 4px rgba(0,0,0,.07); margin-top: 8px;">
+
+    <div id="toggle-cierre" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; user-select:none;" onclick="toggleCierre()">
+      <div>
+        <span style="font-size:14px; font-weight:700; color:#1e293b;">🏪 Cierre Diario Pet Shop</span>
+        <span id="cierre-total-hoy" style="font-size:12px; color:#f97316; font-weight:700; margin-left:10px;"></span>
+      </div>
+      <span id="cierre-chevron" style="font-size:13px; color:#94a3b8; transition:transform .2s;">▼</span>
+    </div>
+
+    <div id="cierre-body">
+      <p style="font-size:12px; color:#94a3b8; margin: 10px 0 12px;">
+        Registrá el monto neto de alimentos sueltos / varios. No toca el stock de la distribuidora.
+      </p>
+
+      <!-- Inputs de carga -->
+      <div style="display:flex; gap:8px; align-items:stretch; margin-bottom:8px;">
+        <input
+          type="number"
+          id="input-cierre-monto"
+          placeholder="Monto $"
+          min="0"
+          style="flex:1; padding:11px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:15px;"
+        >
+        <input
+          type="text"
+          id="input-cierre-notas"
+          placeholder="Nota (opcional)"
+          style="flex:2; padding:11px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px;"
+        >
+        <button id="btn-guardar-cierre" onclick="guardarCierrePetShop()"
+          style="background:#f97316; color:white; border:none; border-radius:10px; padding:11px 18px; font-size:14px; font-weight:700; cursor:pointer; white-space:nowrap;">
+          Guardar
+        </button>
+      </div>
+
+      <!-- Historial del día -->
+      <div id="cierre-historial" style="margin-top:4px;"></div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- BARRA FIJA CONFIRMAR VENTA -->
+<div id="barra-confirmar">
+  <div>
+    <div class="total-label">Total carrito</div>
+    <div class="total-valor" id="total-carrito">$0</div>
+  </div>
+  <button id="btn-confirmar" disabled onclick="confirmarVenta()">
+    ✓ Confirmar venta
+  </button>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- SCRIPTS FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js?v=3"></script>
+<script src="js/utils.js?v=3"></script>
+<script src="js/vender.js?v=1"></script>
+<script src="js/nav-mobile.js?v=3"></script>
+
+</body>
+</html>
