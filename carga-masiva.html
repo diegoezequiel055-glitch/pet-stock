@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carga Masiva — Pet Stock</title>
+  <link rel="stylesheet" href="css/styles.css?v=3">
+  <style>
+    .resumen-card {
+      display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px;
+    }
+    .stat-box {
+      background: white; border-radius: 10px; padding: 16px 24px;
+      box-shadow: var(--sombra); text-align: center; min-width: 120px;
+    }
+    .stat-box .num { font-size: 28px; font-weight: 700; color: var(--verde); }
+    .stat-box .lbl { font-size: 13px; color: var(--gris); }
+    .log-box {
+      background: #1e293b; color: #94a3b8; border-radius: 10px;
+      padding: 16px; font-family: monospace; font-size: 13px;
+      max-height: 260px; overflow-y: auto; margin-top: 16px;
+    }
+    .log-ok   { color: #4ade80; }
+    .log-skip { color: #fbbf24; }
+    .log-err  { color: #f87171; }
+    .barra-prog {
+      height: 10px; background: var(--gris-claro); border-radius: 5px;
+      overflow: hidden; margin-top: 10px;
+    }
+    .barra-prog-inner {
+      height: 100%; background: var(--verde); border-radius: 5px;
+      transition: width .3s; width: 0%;
+    }
+    table.tabla-prev { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table.tabla-prev th { background: #f1f5f9; padding: 8px 10px; text-align: left; font-size: 12px; color: var(--gris); }
+    table.tabla-prev td { padding: 7px 10px; border-bottom: 1px solid var(--gris-claro); }
+    table.tabla-prev tr:hover td { background: #fafbfc; }
+    .sin-costo { color: #94a3b8; font-style: italic; }
+    .tag-gatos  { background: #f3e8ff; color: #7c3aed; }
+    .tag-perros { background: #dbeafe; color: #2563eb; }
+    .tag-ambos  { background: #f1f5f9; color: #475569; }
+    .tag { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+    .prev-wrap { max-height: 400px; overflow-y: auto; border-radius: 8px; border: 1px solid var(--borde); margin-bottom: 16px; }
+    .filtros-prev { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+    .chip { padding:5px 14px; border-radius:20px; border:1px solid var(--borde); background:white; font-size:13px; cursor:pointer; font-weight:600; }
+    .chip.on { background:#1e293b; color:white; border-color:#1e293b; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="index.html">🐾 Pet Stock</a>
+  <a href="lista-precios.html">💲 Precios</a>
+  <a href="importar-datos.html">📥 Importar</a>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1>📦 Carga Masiva desde PDF</h1>
+    <p class="subtitulo">Todos los productos de la lista de precios listos para subir a Firestore</p>
+  </div>
+
+  <!-- Resumen -->
+  <div class="resumen-card">
+    <div class="stat-box">
+      <div class="num" id="tot-total">—</div>
+      <div class="lbl">Productos totales</div>
+    </div>
+    <div class="stat-box">
+      <div class="num" id="tot-perros" style="color:#2563eb">—</div>
+      <div class="lbl">🐶 Perros</div>
+    </div>
+    <div class="stat-box">
+      <div class="num" id="tot-gatos" style="color:#7c3aed">—</div>
+      <div class="lbl">🐱 Gatos</div>
+    </div>
+    <div class="stat-box">
+      <div class="num" id="tot-con-costo" style="color:#0ea5e9">—</div>
+      <div class="lbl">Con costo</div>
+    </div>
+  </div>
+
+  <!-- Opciones -->
+  <div class="bloque-marca" style="margin-bottom:16px">
+    <div style="padding:16px 20px">
+      <strong>Modo de importación:</strong>
+      <div style="margin-top:10px;display:flex;gap:12px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
+          <input type="radio" name="modo" value="nuevos" checked>
+          Solo agregar productos que no existan
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
+          <input type="radio" name="modo" value="todo">
+          Agregar todos (puede generar duplicados)
+        </label>
+      </div>
+      <p style="font-size:12px;color:var(--gris);margin-top:8px">
+        ⚠️ El modo "solo nuevos" compara por nombre + marca. Los precios existentes <strong>no se modifican</strong>.
+      </p>
+    </div>
+  </div>
+
+  <!-- Filtros de previsualización -->
+  <div class="filtros-prev">
+    <button class="chip on" onclick="filtrarPrev('todos', this)">🐾 Todos</button>
+    <button class="chip" onclick="filtrarPrev('perros', this)">🐶 Perros</button>
+    <button class="chip" onclick="filtrarPrev('gatos', this)">🐱 Gatos</button>
+  </div>
+
+  <!-- Tabla de previsualización -->
+  <div class="prev-wrap">
+    <table class="tabla-prev" id="tabla-prev">
+      <thead>
+        <tr>
+          <th>Marca</th>
+          <th>Especie</th>
+          <th>Producto</th>
+          <th>Costo</th>
+          <th>Minorista</th>
+          <th>% Min.</th>
+          <th>Mayorista</th>
+          <th>% May.</th>
+        </tr>
+      </thead>
+      <tbody id="prev-body"></tbody>
+    </table>
+  </div>
+
+  <!-- Botón importar -->
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+    <button class="btn btn-verde" id="btn-importar" onclick="iniciarImportacion()" style="font-size:15px;padding:12px 28px">
+      ⬆️ Importar a Firestore
+    </button>
+    <button class="btn btn-outline" onclick="location.href='lista-precios.html'">Ver lista de precios</button>
+  </div>
+
+  <!-- Progreso -->
+  <div id="zona-progreso" style="display:none;margin-top:20px">
+    <p id="txt-progreso" style="font-size:14px;font-weight:600;margin-bottom:6px">Importando...</p>
+    <div class="barra-prog"><div class="barra-prog-inner" id="barra"></div></div>
+    <div class="log-box" id="log-box"></div>
+  </div>
+
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js?v=3"></script>
+<script src="js/nav-mobile.js?v=3"></script>
+
+<script>
+// =============================================
+// DATOS DEL PDF — NO MODIFICAR
+// costo=0 = sin costo conocido
+// =============================================
+const PRODUCTOS = [
+  // ── GATOS · NESTLE - PURINA ──────────────────────────
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'PROPLAN KITTEN x 1 KG',                        costo:14791,  min:17749,  may:16270  },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'PROPLAN KITTEN x 3 KG',                        costo:40042,  min:48050,  may:44046  },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'PROPLAN KITTEN x 7,5 KG',                      costo:87445,  min:104934, may:96190  },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'PROPLAN GATO ADULTO x 3 KG',                   costo:36364,  min:43637,  may:40000  },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'PROPLAN GATO ADULTO x 7,5 KG',                 costo:79220,  min:95064,  may:87142  },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'PROPLAN GATO ADULTO x 15 KG',                  costo:138579, min:166295, may:152437 },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'PROPLAN URINARY CARE x 1 KG',                  costo:15466,  min:18559,  may:17013  },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'PROPLAN URINARY CARE x 3 KG',                  costo:41744,  min:50093,  may:45918  },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'PROPLAN URINARY CARE x 7,5 KG',                costo:86723,  min:104068, may:95395  },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'PROPLAN URINARY CARE x 15 KG',                 costo:148432, min:178118, may:163275 },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'PROPLAN GATO ADULT +7 x 3 KG',                 costo:40083,  min:48100,  may:44091  },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'PROPLAN GATO ADULT +7 x 7,5 KG',               costo:85734,  min:102881, may:94307  },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'EXCELLENT CAT ADULT x 3 KG',                   costo:23494,  min:28193,  may:25843  },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'EXCELLENT CAT ADULT x 7,5 KG',                 costo:50618,  min:60742,  may:55680  },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'EXCELLENT CAT ADULT x 15 KG',                  costo:97675,  min:117210, may:107443 },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'EXCELLENT CAT ADULTO MANTENIMIENTO x 15 KG',   costo:71885,  min:86262,  may:79074  },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'EXCELLENT KITTEN x 1 KG',                      costo:9518,   min:11422,  may:10470  },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'EXCELLENT KITTEN x 7,5 KG',                    costo:56061,  min:67273,  may:61667  },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'EXCELLENT URINARY / CAT STERILIZED x 1 KG',    costo:9998,   min:11998,  may:10998  },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'EXCELLENT URINARY / CAT STERILIZED x 7,5 KG',  costo:58337,  min:70004,  may:64171  },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'EXCELLENT URINARY CAT x 15 KG',                costo:112541, min:135049, may:123795 },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'CAT CHOW GATITO x 8 KG',                       costo:42940,  min:51528,  may:47234  },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'CAT CHOW GATITO x 15 KG',                      costo:73227,  min:87872,  may:80550  },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'CAT CHOW CARNE / PESCADO x 15 KG',             costo:66935,  min:80322,  may:73629  },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'CAT CHOW ADULTO CARNE/PESCADO x 8 KG',         costo:41208,  min:49450,  may:45329  },
+  { marca:'NESTLE - PURINA', especie:'gatos', nombre:'GATI PESCADO Y SALMON / CARNE Y POLLO x 15 KG',costo:38676,  min:46411,  may:42544  },
+
+  // ── GATOS · ROYAL CANIN ──────────────────────────────
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'PERF. KITTEN x 7,5 KG',                  costo:58882,  min:70658,  may:64770  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'PERF. CAT ADULT x 7,5 KG',               costo:55276,  min:66331,  may:60804  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'FIT x 1,5 KG',                           costo:22080,  min:26496,  may:24288  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'FIT x 7,5 KG',                           costo:92638,  min:111166, may:101902 },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'FIT x 15 KG',                            costo:156464, min:187757, may:172110 },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'SENSIBLE x 1,5 KG',                      costo:23625,  min:28350,  may:25988  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'SENSIBLE x 7,5 KG',                      costo:92640,  min:111168, may:101904 },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'WEIGHT CARE x 1,5 KG',                   costo:25048,  min:30058,  may:27553  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'WEIGHT CARE x 7,5 KG',                   costo:98765,  min:118518, may:108642 },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'URINARY CARE x 1,5 KG',                  costo:25783,  min:30940,  may:28361  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'URINARY CARE x 7,5 KG',                  costo:106719, min:128063, may:117391 },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'INDOOR x 1,5 KG',                        costo:23618,  min:28342,  may:25980  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'INDOOR x 7,5 KG',                        costo:92638,  min:111166, may:101902 },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'INDOOR +7 x 1,5 KG',                     costo:24809,  min:29771,  may:27290  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'INDOOR +7 x 7,5 KG',                     costo:97309,  min:116771, may:107040 },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'SIAMESE / PERSIAN x 1,5 KG',             costo:26432,  min:31718,  may:29075  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'SIAMESE / PERSIAN x 7,5 KG',             costo:96724,  min:116069, may:106396 },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'KITTEN 36 x 7,5 KG',                     costo:92590,  min:111108, may:101849 },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'KITTEN 36 x 1,5 KG',                     costo:25210,  min:30252,  may:27731  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'BABY CAT x 1,5 KG',                      costo:26467,  min:31760,  may:29114  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'SATIETY x 1,5 KG',                       costo:23186,  min:27823,  may:25505  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'DIABETIC x 1,5 KG',                      costo:30347,  min:36416,  may:33382  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'GASTRO INTESTINAL x 2 KG',               costo:32862,  min:39434,  may:36148  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'RENAL x 2 KG',                           costo:30065,  min:36078,  may:33072  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'HYPOALLERGENIC x 1,5 KG',                costo:39333,  min:47200,  may:43266  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'HEPATIC x 1,5 KG',                       costo:25662,  min:30794,  may:28228  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'URINARY CAT S/O x 1,5 KG',               costo:26431,  min:31717,  may:29074  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'URINARY CAT S/O x 7,5 KG',               costo:97604,  min:117125, may:107364 },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'MATURE CONSULT x 3,5 KG',                costo:56213,  min:67456,  may:61834  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'WEIGHT CONTROL (CASTRADO) x 1,5 KG',     costo:23646,  min:28375,  may:26011  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'WEIGHT CONTROL (CASTRADO) x 3 KG',       costo:45886,  min:55063,  may:50475  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'WEIGHT CONTROL (CASTRADO) x 7,5 KG',     costo:92579,  min:111095, may:101837 },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'WEIGHT CONTROL (CASTRADO) x 12 KG',      costo:134207, min:161048, may:147628 },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'POUCH INSTINCTIVE x 12 SOBRES',           costo:29321,  min:35185,  may:32253  },
+  { marca:'ROYAL CANIN', especie:'gatos', nombre:'POUCH INTENSE BEAUTY x 12 SOBRES',        costo:29321,  min:35185,  may:32253  },
+  { marca:'ROYAL CANIN', especie:'ambos', nombre:'LATA RECOVERY RS FELINE & CANINE x 195 Grs.', costo:4775, min:5730, may:5253 },
+
+  // ── GATOS · VITAL CAT ────────────────────────────────
+  { marca:'VITAL CAT', especie:'gatos', nombre:'VITAL CAT PREMIUM x 7,5 KG',                    costo:27048,  min:32458,  may:29753  },
+  { marca:'VITAL CAT', especie:'gatos', nombre:'VITAL CAT PREMIUM x 15 KG',                     costo:52372,  min:62846,  may:57609  },
+  { marca:'VITAL CAT', especie:'gatos', nombre:'VITAL CAT PREMIUM URINARY x 7,5 KG',            costo:29753,  min:35704,  may:32728  },
+  { marca:'VITAL CAT', especie:'gatos', nombre:'BELCAT x 10 KG',                                costo:20058,  min:24070,  may:22064  },
+  { marca:'VITAL CAT', especie:'gatos', nombre:'VITAL CAT BALANCED x 7,5 KG',                   costo:52745,  min:63294,  may:58020  },
+  { marca:'VITAL CAT', especie:'gatos', nombre:'VITAL CAT BALANCED x 15 KG',                    costo:88293,  min:105952, may:97122  },
+  { marca:'VITAL CAT', especie:'gatos', nombre:'VITAL CAT BALANCED CONTROL PH x 7,5 KG',        costo:53545,  min:64254,  may:58900  },
+  { marca:'VITAL CAT', especie:'gatos', nombre:'VITAL CAT COMPLETE x 15 KG',                    costo:56472,  min:67766,  may:62119  },
+  { marca:'VITAL CAT', especie:'gatos', nombre:'VITAL CAT COMPLETE KITTEN x 7,5 KG',            costo:36585,  min:43902,  may:40244  },
+  { marca:'VITAL CAT', especie:'gatos', nombre:'VITAL CAT COMPLETE KITTEN x 15 KG',             costo:58763,  min:70516,  may:64639  },
+  { marca:'VITAL CAT', especie:'gatos', nombre:'VITAL CAT COMPLETE LIGHT/CASTRADOS x 7,5 KG',   costo:37545,  min:45054,  may:41300  },
+
+  // ── GATOS · ALIMENTOS VARIOS ──────────────────────────
+  { marca:'DR COSSIA',   especie:'gatos', nombre:'DR COSSIA CLASSIC CAT PREMIUM x 7,5 KG',     costo:0, min:32200, may:29273 },
+  { marca:'DR COSSIA',   especie:'gatos', nombre:'DR COSSIA BOORTON MANTENIMIENTO x 8 KG',     costo:0, min:28600, may:26000 },
+  { marca:'DR COSSIA',   especie:'gatos', nombre:'DR COSSIA BRIO FORTIFICADO x 10 KG',         costo:0, min:28600, may:26000 },
+  { marca:'DR COSSIA',   especie:'gatos', nombre:'DR COSSIA AP! ADULTO x 7,5 KG',              costo:0, min:29000, may:26364 },
+  { marca:'PROVET',      especie:'gatos', nombre:'PROVET TOTAL BALANCED x 10 KG',              costo:0, min:24000, may:21818 },
+  { marca:'SABROSITOS',  especie:'gatos', nombre:'SABROSITOS GATO ADULTO x 10 KG',             costo:0, min:25000, may:22727 },
+  { marca:'SABROSITOS',  especie:'gatos', nombre:'SABROSITOS GATO ADULTO x 20 KG',             costo:0, min:48000, may:43636 },
+  { marca:'MAINTENANCE', especie:'gatos', nombre:'MAINTENANCE CRIADORES ADULTO x 15 KG',       costo:0, min:37700, may:34273 },
+  { marca:'VARIOS',      especie:'gatos', nombre:'RAZA ADULTO x 10 KG',                        costo:0, min:28600, may:26000 },
+  { marca:'VARIOS',      especie:'gatos', nombre:'RAZA ADULTO x 15 KG',                        costo:0, min:40700, may:37000 },
+  { marca:'VARIOS',      especie:'gatos', nombre:'PATRIOTA x 15 KG',                           costo:0, min:25000, may:22727 },
+  { marca:'INFINITY',    especie:'gatos', nombre:'INFINITY GATO ADULTO x 10 KG',               costo:0, min:30500, may:27727 },
+  { marca:'WHISKAS',     especie:'gatos', nombre:'WHISKAS GATO ADULTO x 10 KG',                costo:0, min:47500, may:43182 },
+  { marca:'AGILITY',     especie:'gatos', nombre:'AGILITY URINARY x 10 KG',                    costo:0, min:66500, may:60455 },
+  { marca:'AGILITY',     especie:'gatos', nombre:'AGILITY ADULTO x 10 KG',                     costo:0, min:61300, may:55727 },
+  { marca:'OLD PRINCE',  especie:'gatos', nombre:'OLD PRINCE EQUILIBRIUM x 7,5 KG',            costo:0, min:46000, may:41818 },
+  { marca:'OLD PRINCE',  especie:'gatos', nombre:'OLD PRINCE EQUILIBRIUM x 3 KG',              costo:0, min:19200, may:17455 },
+  { marca:'OLD PRINCE',  especie:'gatos', nombre:'OLD PRINCE EQUILIBRIUM URINARY x 3 KG',      costo:0, min:22200, may:20182 },
+  { marca:'CAT PRO',     especie:'gatos', nombre:'CAT PRO ADULTO x 15 KG',                     costo:0, min:75000, may:68182 },
+  { marca:'CAT PRO',     especie:'gatos', nombre:'CAT PRO ADULTO x 7,5 KG',                    costo:0, min:44000, may:40000 },
+
+  // ── GATOS · SANITARIOS ───────────────────────────────
+  { marca:'SANITARIOS',   especie:'gatos', nombre:'PIEDRAS A GRANEL x 20 KG',                  costo:0, min:12000, may:10909 },
+  { marca:'SANITARIOS',   especie:'gatos', nombre:'PIEDRAS SANICAT (10x2kg) x 20 KG',          costo:0, min:14000, may:12727 },
+  { marca:'SANITARIOS',   especie:'gatos', nombre:'MADERITAS POOPY PETS 15 KG A GRANEL',       costo:0, min:13000, may:11818 },
+  { marca:'SANITARIOS',   especie:'gatos', nombre:'MADERITAS POOPY PETS 25 KG (5x5kg)',        costo:0, min:18000, may:16364 },
+  { marca:'WONDERCAT',    especie:'gatos', nombre:'WONDERCAT NEUTRA (6x3,6kg)',                 costo:0, min:27500, may:25000 },
+  { marca:'WONDERCAT',    especie:'gatos', nombre:'WONDERCAT PERFUMADA (6x3,6kg)',              costo:0, min:30500, may:27727 },
+  { marca:'WONDERCAT',    especie:'gatos', nombre:'WONDERCAT AGLOMERANTE x 16 KG (4x4kg)',     costo:0, min:27000, may:24545 },
+  { marca:'WONDERCAT',    especie:'gatos', nombre:'WONDERCAT AGLOMERANTE BIDON',                costo:0, min:12000, may:10909 },
+
+  // ── PERROS · NESTLE - PURINA ─────────────────────────
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'PRO PLAN PUPPY SMALL x 3 KG',                          costo:31107,  min:37328,  may:34218  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'PRO PLAN PUPPY SMALL x 7,5 KG',                        costo:65071,  min:78085,  may:71578  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'PRO PLAN PUPPY MEDIUM / LARGE x 15 KG',                costo:102492, min:122990, may:112741 },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'PRO PLAN ADULT SMALL x 3 KG',                          costo:28188,  min:33826,  may:31007  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'PRO PLAN ADULT SMALL x 7,5 KG',                        costo:58947,  min:70736,  may:64842  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'PRO PLAN ADULT MEDIUM / LARGE x 15 KG',                costo:93416,  min:112099, may:102758 },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'PRO PLAN ACT. MIND MEDIANO x 3 KG',                    costo:29635,  min:35562,  may:32599  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'PRO PLAN ACT. MIND SMALL x 3 KG',                      costo:31022,  min:37226,  may:34124  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'PRO PLAN ACTIVE MIND SMALL x 7,5 KG',                  costo:65034,  min:78041,  may:71537  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'PRO PLAN ACTIVE MIND x 15 KG',                         costo:102674, min:123209, may:112941 },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'PRO PLAN REDUCE CALORIE x 3 KG',                       costo:31130,  min:37356,  may:34243  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'PRO PLAN REDUCE CALORIE SMALL x 3 KG',                 costo:32457,  min:38948,  may:35703  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'PRO PLAN REDUCE CALORIE x 12 KG',                      costo:85920,  min:103104, may:94512  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'PRO PLAN SENSITIVE SKIN x 3 KG',                       costo:30985,  min:37182,  may:34084  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'PRO PLAN SENSITIVE SKIN x 12 KG',                      costo:85788,  min:102946, may:94367  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'EXCELLENT CH&R ADULT MEDIUM x 15 KG',                  costo:56303,  min:67564,  may:61933  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'EXCELLENT CH&R ADULT MEDIUM x 20 KG',                  costo:66876,  min:80251,  may:73564  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'EXCELLENT CH&R ADULT SMALL x 15 KG',                   costo:58661,  min:70393,  may:64527  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'EXCELLENT SENIOR x 15 KG',                             costo:61939,  min:74327,  may:68133  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'EXCELLENT RED. CALORIES x 15 KG',                      costo:64748,  min:77698,  may:71223  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'EXCELLENT MAINTENANCE FORMULA ADULT x 20 KG',           costo:50998,  min:61198,  may:56098  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'EXCELLENT ADULT SKIN CARE CORDERO x 15 KG',             costo:60807,  min:72968,  may:66888  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'EXCELLENT CH&R PUPPY MEDIUM x 15 KG',                  costo:62086,  min:74503,  may:68295  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'EXCELLENT CH&R PUPPY MEDIUM x 20 KG',                  costo:75848,  min:91018,  may:83433  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'DOG CHOW ADULTO MEDIANO Y GRANDE x 21 KG',             costo:47404,  min:56885,  may:52144  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'DOG CHOW ADULTO MEDIANO Y GRANDE x 8 KG',              costo:23000,  min:27600,  may:25300  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'DOG CHOW ADULTO RAZAS PEQUEÑAS x 21 KG',               costo:50073,  min:60088,  may:55080  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'DOG CHOW CACHORRO MEDIANO Y GRANDE x 21 KG',           costo:54184,  min:65021,  may:59602  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'DOG CHOW CACHORRO RAZAS PEQUEÑAS x 21 KG',             costo:56714,  min:68057,  may:62385  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'DOG CHOW ADULTO MAYORES DE 7 AÑOS x 21 KG',            costo:54751,  min:65701,  may:60226  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'DOG CHOW ADULTO RAZA PEQUEÑA x 8 KG',                  costo:23000,  min:27600,  may:25300  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'DOGUI ADULTO x 21 KG',                                 costo:36366,  min:43639,  may:40003  },
+  { marca:'NESTLE - PURINA', especie:'perros', nombre:'DOGUI CACHORRO x 21 KG',                               costo:39924,  min:47909,  may:43916  },
+
+  // ── PERROS · ROYAL CANIN ─────────────────────────────
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'PERFORMANCE CACHORRO x 15 KG',                costo:70936,  min:85123,  may:78030  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'PERFORMANCE WEIGHT CONTROL x 15 KG',          costo:65716,  min:78859,  may:72288  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'PERFORMANCE ADULT x 15 KG',                   costo:65716,  min:78859,  may:72288  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'PERFORMANCE ADULT x 20 KG',                   costo:84128,  min:100954, may:92541  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MINI ADULTO x 15 KG',                         costo:113884, min:136661, may:125272 },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MINI ADULT x 7,5 KG',                         costo:69366,  min:83239,  may:76303  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MINI PUPPY x 7,5 KG',                         costo:63364,  min:76037,  may:69700  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MINI PUPPY x 15 KG',                          costo:118077, min:141692, may:129885 },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MEDIUM ADULT x 15 KG',                        costo:108178, min:129814, may:118996 },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MAXI ADULT / GIANT ADULT x 15 KG',            costo:107727, min:129272, may:118500 },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MEDIUM PUPPY / MAXI PUPPY x 15 KG',           costo:115005, min:138006, may:126506 },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'GIANT JUNIOR x 15 KG',                        costo:115005, min:138006, may:126506 },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MEDIUM DERMACONFORT / WEIGHT CARE x 10 KG',   costo:83446,  min:100135, may:91791  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MEDIUM ADULT +7 / MEDIUM ADULT +10 x 15 KG',  costo:118973, min:142768, may:130870 },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MAXI DERMACONFORT / WEIGHT CARE x 10 KG',     costo:83446,  min:100135, may:91791  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MAXI ADULT +5 / MAXI ADULT +8 x 15 KG',       costo:118476, min:142171, may:130324 },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'RENAL x 10 KG',                               costo:88988,  min:106786, may:97887  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'RENAL x 1,5 KG',                              costo:16483,  min:19780,  may:18131  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'SATIETY SUPPORT x 1,5 KG',                    costo:16913,  min:20296,  may:18604  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'SATIETY SUPPORT x 7,5 KG',                    costo:68287,  min:81944,  may:75116  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'SATIETY SUPPORT x 15 KG',                     costo:121864, min:146237, may:134050 },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'GASTRO INTESTINAL x 10 KG',                   costo:86646,  min:103975, may:95311  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'GASTRO INTESTINAL x 2 KG',                    costo:22165,  min:26598,  may:24382  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'CARDIAC x 10 KG',                             costo:101384, min:121661, may:111522 },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'CARDIAC x 2 KG',                              costo:25502,  min:30602,  may:28052  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'HYPOALLERGENIC x 10 KG',                      costo:103075, min:123690, may:113383 },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'HYPOALLERGENIC x 2 KG',                       costo:27201,  min:32641,  may:29921  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'HYPOALLERGENIC SMALL x 2 KG',                 costo:28155,  min:33786,  may:30971  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'URINARY x 10 KG',                             costo:96246,  min:115495, may:105871 },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'URINARY x 1,5 KG',                            costo:17615,  min:21138,  may:19377  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'HEPATIC x 10 KG',                             costo:97394,  min:116873, may:107133 },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'HEPATIC x 1,5 KG',                            costo:18062,  min:21674,  may:19868  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'DIABETIC x 10 KG',                            costo:101066, min:121279, may:111173 },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'DIABETIC x 2 KG',                             costo:25927,  min:31112,  may:28520  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MOBILITY LARGE x 15 KG',                      costo:135434, min:162521, may:148977 },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MINI ADULT x 1 KG',                           costo:10570,  min:12684,  may:11627  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MINI ADULT x 3 KG',                           costo:29903,  min:35884,  may:32893  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MINI PUPPY x 1 KG',                           costo:10628,  min:12754,  may:11691  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MINI PUPPY x 3 KG',                           costo:31202,  min:37442,  may:34322  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MINI STARTER x 1 KG',                         costo:11401,  min:13681,  may:12541  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MINI STARTER x 3 KG',                         costo:33471,  min:40165,  may:36818  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MINI ADULT +8 / +12 x 1 KG',                  costo:11286,  min:13543,  may:12415  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MINI ADULT +8 / +12 x 3 KG',                  costo:31889,  min:38267,  may:35078  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MINI WEIGHT CARE x 1 KG',                     costo:11911,  min:14293,  may:13102  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MINI WEIGHT CARE x 3 KG',                     costo:33695,  min:40434,  may:37065  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MINI DERMACONFORT x 1 KG',                    costo:11710,  min:14052,  may:12881  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MINI DERMACONFORT x 3 KG',                    costo:31608,  min:37930,  may:34769  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MEDIUM ADULTO x 3 KG',                        costo:28400,  min:34080,  may:31240  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MEDIUM PUPPY x 3 KG',                         costo:31654,  min:37985,  may:34819  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'MEDIUM ADULT +7 x 3 KG',                      costo:31115,  min:37338,  may:34227  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'YORKSHIRE ADULT x 3 KG',                      costo:32527,  min:39032,  may:35780  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'CANICHE ADULT x 1 KG',                        costo:11053,  min:13264,  may:12158  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'CANICHE ADULT x 3 KG',                        costo:32527,  min:39032,  may:35780  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'CANICHE ADULT x 7,5 KG',                      costo:69457,  min:83348,  may:76403  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'CANICHE JUNIOR x 1 KG',                       costo:11585,  min:13902,  may:12744  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'CANICHE JUNIOR x 3 KG',                       costo:35378,  min:42454,  may:38916  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'BULLDOG FRANCES ADULT x 3 KG',                costo:32527,  min:39032,  may:35780  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'BULLDOG FRANCES ADULT x 7,5 KG',              costo:69457,  min:83348,  may:76403  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'BULLDOG FRANCES JR x 3 KG',                   costo:35378,  min:42454,  may:38916  },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'OVEJERO / LABRADOR ADULT x 12 KG',            costo:91222,  min:109466, may:100344 },
+  { marca:'ROYAL CANIN', especie:'perros', nombre:'BOXER / GOLDEN ADULT x 12 KG',                costo:91222,  min:109466, may:100344 },
+
+  // ── PERROS · VITAL CAN ───────────────────────────────
+  { marca:'VITAL CAN', especie:'perros', nombre:'VITAL CAN PREMIUM ADULT x 20 KG',                   costo:36535,  min:43842,  may:40189  },
+  { marca:'VITAL CAN', especie:'perros', nombre:'VITAL CAN PREMIUM RAZA PEQUEÑAS x 20 KG',           costo:37117,  min:44540,  may:40829  },
+  { marca:'VITAL CAN', especie:'perros', nombre:'VITAL CAN PREMIUM ADULTO CORDERO x 20 KG',          costo:44000,  min:52800,  may:48400  },
+  { marca:'VITAL CAN', especie:'perros', nombre:'VITAL CAN PREMIUM CONTROL DE PESO x 20 KG',         costo:40154,  min:48185,  may:44169  },
+  { marca:'VITAL CAN', especie:'perros', nombre:'BELCAN ADULTO x 22 KG',                             costo:24375,  min:29250,  may:26813  },
+  { marca:'VITAL CAN', especie:'perros', nombre:'BALANCED PUPPY MEDIUM / LARGE x 20 KG',             costo:70306,  min:84367,  may:77337  },
+  { marca:'VITAL CAN', especie:'perros', nombre:'BALANCED ADULT MEDIUM / LARGE x 20 KG',             costo:57358,  min:68830,  may:63094  },
+  { marca:'VITAL CAN', especie:'perros', nombre:'BALANCED ADULT GIANT x 20 KG',                      costo:64361,  min:77233,  may:70797  },
+  { marca:'VITAL CAN', especie:'perros', nombre:'BALANCED ADULT CORDERO x 15 KG',                    costo:56046,  min:67255,  may:61651  },
+  { marca:'VITAL CAN', especie:'perros', nombre:'BALANCED SENIOR MEDIUM x 12 KG',                    costo:41253,  min:49504,  may:45378  },
+  { marca:'VITAL CAN', especie:'perros', nombre:'BALANCED CONTROL DE PESO x 20 KG',                  costo:71596,  min:85915,  may:78756  },
+  { marca:'VITAL CAN', especie:'perros', nombre:'VITAL CAN COMPLETE ADULT x 20 KG',                  costo:44598,  min:53518,  may:49058  },
+  { marca:'VITAL CAN', especie:'perros', nombre:'VITAL CAN COMPLETE PUPPY x 20 KG',                  costo:49172,  min:59006,  may:54089  },
+  { marca:'VITAL CAN', especie:'perros', nombre:'VITAL CAN COMPLETE LIGHT / SENIOR x 20 KG',         costo:51364,  min:61637,  may:56500  },
+  { marca:'VITAL CAN', especie:'perros', nombre:'BALANCED ADULTO MORDIDA PEQUEÑA x 15 KG',           costo:46945,  min:56334,  may:51640  },
+
+  // ── PERROS · EUKANUBA ────────────────────────────────
+  { marca:'EUKANUBA', especie:'perros', nombre:'EUK. PUPPY SMALL x 15 KG',                     costo:70664,  min:84797,  may:77730  },
+  { marca:'EUKANUBA', especie:'perros', nombre:'EUK. PUPPY MEDIUM / LARGE x 15 KG',            costo:67174,  min:80609,  may:73891  },
+  { marca:'EUKANUBA', especie:'perros', nombre:'EUK. ADULT SMALL x 15 KG',                     costo:68898,  min:82678,  may:75788  },
+  { marca:'EUKANUBA', especie:'perros', nombre:'EUK. ADULT SMALL x 7,5 KG',                    costo:41004,  min:49205,  may:45104  },
+  { marca:'EUKANUBA', especie:'perros', nombre:'EUK. ADULT MEDIUM x 15 KG',                    costo:68867,  min:82640,  may:75754  },
+  { marca:'EUKANUBA', especie:'perros', nombre:'EUK. ADULT LARGE x 15 KG',                     costo:66610,  min:79932,  may:73271  },
+  { marca:'EUKANUBA', especie:'perros', nombre:'EUK. SENIOR MEDIUM x 15 KG',                   costo:70255,  min:84306,  may:77281  },
+  { marca:'EUKANUBA', especie:'perros', nombre:'EUK. SENIOR LARGE x 15 KG',                    costo:69971,  min:83965,  may:76968  },
+  { marca:'EUKANUBA', especie:'perros', nombre:'EUK. WEIGHT CONTROL MEDIUM x 15 KG',           costo:74379,  min:89255,  may:81817  },
+  { marca:'EUKANUBA', especie:'perros', nombre:'EUK. WEIGHT CONTROL LARGE x 15 KG',            costo:75056,  min:90067,  may:82562  },
+  { marca:'EUKANUBA', especie:'perros', nombre:'EUK. PUPPY SMALL x 3 KG',                      costo:18443,  min:22132,  may:20287  },
+  { marca:'EUKANUBA', especie:'perros', nombre:'EUK. ADULT SMALL x 3 KG',                      costo:17882,  min:21458,  may:19670  },
+  { marca:'EUKANUBA', especie:'perros', nombre:'EUK. SENIOR SMALL x 3 KG',                     costo:19043,  min:22852,  may:20947  },
+
+  // ── PERROS · DR COSSIA y PROVET ──────────────────────
+  { marca:'DR COSSIA', especie:'perros', nombre:'DR COSSIA SUPER PREMIUM CRIADOR ADULT x 20 KG',  costo:0, min:71600, may:65091 },
+  { marca:'DR COSSIA', especie:'perros', nombre:'DR COSSIA PREMIUM 28% PROTEIN ADULT x 20 KG',   costo:0, min:65000, may:59091 },
+  { marca:'DR COSSIA', especie:'perros', nombre:'DR COSSIA AP! ALIMENTO PREMIUM x 20 KG',        costo:0, min:36000, may:32727 },
+  { marca:'PROVET',    especie:'perros', nombre:'PROVET ULTRA PRO 27% PROTEIN ADULT x 20 KG',    costo:0, min:38000, may:34545 },
+  { marca:'PROVET',    especie:'perros', nombre:'PROVET ULTRA PRO 27% PROTEIN CACHORRO x 15 KG', costo:0, min:29400, may:26727 },
+  { marca:'PROVET',    especie:'perros', nombre:'PROVET TOTAL BALANCED ADULTO x 20 KG',          costo:0, min:29000, may:26364 },
+  { marca:'PROVET',    especie:'perros', nombre:'PROVET TOTAL BALANCED CACHORRO x 15 KG',        costo:0, min:24200, may:22000 },
+  { marca:'DOG PRO',   especie:'perros', nombre:'DOG PRO ADULTO x 20 KG (VITALCROPS)',            costo:0, min:55000, may:50000 },
+
+  // ── PERROS · ALIMENTOS VARIOS ─────────────────────────
+  { marca:'MAINTENANCE', especie:'perros', nombre:'MAINTENANCE CRIADORES ADULTO x 22 KG',           costo:0, min:32000, may:29091 },
+  { marca:'MAINTENANCE', especie:'perros', nombre:'MAINTENANCE CRIADORES ADULT CORDERO x 20 KG',    costo:0, min:48700, may:44273 },
+  { marca:'MAINTENANCE', especie:'perros', nombre:'MAINTENANCE CRIADORES CACHORRO x 15 KG',         costo:0, min:29700, may:27000 },
+  { marca:'VORAZ',       especie:'perros', nombre:'VORAZ ADULTO x 25 KG',                           costo:0, min:30000, may:27273 },
+  { marca:'SABROSITOS',  especie:'perros', nombre:'SABROSITOS PERRO x 22 KG',                       costo:0, min:34000, may:30909 },
+  { marca:'SABROSITOS',  especie:'perros', nombre:'SABROSITOS CACHORRO x 18 KG',                    costo:0, min:37200, may:33818 },
+  { marca:'BIOPET',      especie:'perros', nombre:'BIOPET ADULTO x 20 KG',                          costo:0, min:31000, may:28182 },
+  { marca:'BIOPET',      especie:'perros', nombre:'BIOPET RAZA PEQUEÑA x 15 KG',                    costo:0, min:24600, may:22364 },
+  { marca:'BIOPET',      especie:'perros', nombre:'BIOPET CACHORRO x 15 KG',                        costo:0, min:30700, may:27909 },
+  { marca:'BIOPET',      especie:'perros', nombre:'BIOPET CORDERO x 20 KG',                         costo:0, min:38200, may:34727 },
+  { marca:'OLD PRINCE',  especie:'perros', nombre:'OLD PRINCE CORDERO ADULTO x 15 KG',              costo:0, min:66000, may:60000 },
+  { marca:'OLD PRINCE',  especie:'perros', nombre:'OLD PRINCE CORDERO AD RAZA PEQUEÑA x 15 KG',    costo:0, min:75000, may:68182 },
+  { marca:'OLD PRINCE',  especie:'perros', nombre:'OLD PRINCE EQUILIBRIUM ADULTO x 20 KG',          costo:0, min:62000, may:56364 },
+  { marca:'OLD PRINCE',  especie:'perros', nombre:'OLD PRINCE CORDERO CACHORRO x 15 KG',            costo:0, min:75000, may:68182 },
+  { marca:'OLD PRINCE',  especie:'perros', nombre:'OLD PRINCE CORDERO ADULTO x 3 KG',               costo:17500, min:0, may:15909 },
+  { marca:'OLD PRINCE',  especie:'perros', nombre:'OLD PRINCE CORDERO AD RAZA PEQUEÑA x 3 KG',     costo:18500, min:0, may:16818 },
+  { marca:'OLD PRINCE',  especie:'perros', nombre:'OLD PRINCE CORDERO CACHORRO x 3 KG',             costo:18500, min:0, may:16818 },
+  { marca:'INFINITY',    especie:'perros', nombre:'INFINITY ADULTO x 20 KG',                        costo:0, min:41400, may:37636 },
+  { marca:'INFINITY',    especie:'perros', nombre:'INFINITY RAZA PEQUEÑA x 15 KG',                  costo:0, min:33000, may:30000 },
+  { marca:'PEDIGREE',    especie:'perros', nombre:'PEDIGREE ADULTO x 21 KG',                        costo:0, min:60000, may:54545 },
+  { marca:'PEDIGREE',    especie:'perros', nombre:'PEDIGREE ADULTO RAZA PEQUEÑA x 21 KG',           costo:0, min:60000, may:54545 },
+  { marca:'PEDIGREE',    especie:'perros', nombre:'PEDIGREE CACHORRO x 21 KG',                      costo:0, min:63600, may:57818 },
+  { marca:'AGILITY',     especie:'perros', nombre:'AGILITY ADULTO x 20 KG',                         costo:0, min:61800, may:56182 },
+  { marca:'AGILITY',     especie:'perros', nombre:'AGILITY CACHORRO x 20 KG',                       costo:0, min:71000, may:64545 },
+  { marca:'ZIMPY',       especie:'perros', nombre:'ZIMPY ADULTO x 25 KG',                           costo:0, min:22000, may:20000 },
+  { marca:'VALIANT',     especie:'perros', nombre:'VALIANT ADULTO x 20 KG',                         costo:0, min:28000, may:25455 },
+  { marca:'DR PERROT',   especie:'perros', nombre:'DR PERROT x 20 KG',                              costo:0, min:25000, may:22727 },
+  { marca:'VARIOS',      especie:'perros', nombre:'RAZA ADULTO x 21 KG',                            costo:0, min:36000, may:32727 },
+  { marca:'VARIOS',      especie:'perros', nombre:'ARROZ CON VITAMINAS',                            costo:0, min:21500, may:19545 },
+  { marca:'DOG SELECCION',especie:'perros',nombre:'DOG SELECCION ADULTO MEDIANO x 21 KG',           costo:0, min:44200, may:40182 },
+  { marca:'DOG SELECCION',especie:'perros',nombre:'DOG SELECCION ADULTO RAZA PEQUEÑA x 15 KG',     costo:0, min:33800, may:30727 },
+  { marca:'DOG SELECCION',especie:'perros',nombre:'DOG SELECCION CACHORRO x 21 KG',                costo:0, min:50500, may:45909 },
+  { marca:'GANDUM',      especie:'perros', nombre:'GANDUM PERRO ADULTO x 20 KG',                    costo:0, min:18000, may:16364 },
+
+  // ── CEREALES / AVES ───────────────────────────────────
+  { marca:'CEREALES', especie:'ambos', nombre:'MEZCLA PARA GALLINAS x 24 KG',   costo:16000, min:0, may:0 },
+  { marca:'CEREALES', especie:'ambos', nombre:'MEZCLA PARA CANARIOS x 10 KG',   costo:19500, min:0, may:0 },
+  { marca:'CEREALES', especie:'ambos', nombre:'ALPISTE x 10 KG',                costo:21800, min:0, may:0 },
+  { marca:'CEREALES', especie:'ambos', nombre:'MIJO x 10 KG',                   costo:7300,  min:0, may:0 },
+  { marca:'CEREALES', especie:'ambos', nombre:'GIRASOL x 10 KG',                costo:14000, min:0, may:0 },
+  { marca:'CEREALES', especie:'ambos', nombre:'CONEJIN GANAVE x 25 KG',         costo:20000, min:0, may:0 },
+];
+
+// ── Calcular márgenes ────────────────────────────────────
+function calcMargenes(p) {
+  const mMin = (p.costo > 0 && p.min > 0)
+    ? Math.round(((p.min - p.costo) / p.costo) * 100) : 0;
+  const mMay = (p.costo > 0 && p.may > 0)
+    ? Math.round(((p.may - p.costo) / p.costo) * 100) : 0;
+  return { mMin, mMay };
+}
+
+// ── Helpers ──────────────────────────────────────────────
+const fmt = n => n > 0 ? '$' + n.toLocaleString('es-AR') : '—';
+
+let filtroActual = 'todos';
+
+function filtrarPrev(val, btn) {
+  filtroActual = val;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+  btn.classList.add('on');
+  renderPrev();
+}
+
+function renderPrev() {
+  const lista = filtroActual === 'todos'
+    ? PRODUCTOS
+    : PRODUCTOS.filter(p => p.especie === filtroActual || p.especie === 'ambos');
+
+  const body = document.getElementById('prev-body');
+  body.innerHTML = lista.map(p => {
+    const { mMin, mMay } = calcMargenes(p);
+    return `<tr>
+      <td><strong>${p.marca}</strong></td>
+      <td><span class="tag tag-${p.especie}">${p.especie}</span></td>
+      <td>${p.nombre}</td>
+      <td>${p.costo > 0 ? fmt(p.costo) : '<span class="sin-costo">sin dato</span>'}</td>
+      <td>${fmt(p.min)}</td>
+      <td>${mMin > 0 ? mMin+'%' : '—'}</td>
+      <td>${fmt(p.may)}</td>
+      <td>${mMay > 0 ? mMay+'%' : '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function actualizarStats() {
+  document.getElementById('tot-total').textContent  = PRODUCTOS.length;
+  document.getElementById('tot-perros').textContent = PRODUCTOS.filter(p => p.especie === 'perros').length;
+  document.getElementById('tot-gatos').textContent  = PRODUCTOS.filter(p => p.especie === 'gatos' || p.especie === 'ambos').length;
+  document.getElementById('tot-con-costo').textContent = PRODUCTOS.filter(p => p.costo > 0).length;
+}
+
+// ── Log helper ───────────────────────────────────────────
+function log(msg, tipo = '') {
+  const box = document.getElementById('log-box');
+  box.innerHTML += `<div class="log-${tipo}">${msg}</div>`;
+  box.scrollTop = box.scrollHeight;
+}
+
+// ── IMPORTACIÓN ──────────────────────────────────────────
+async function iniciarImportacion() {
+  const modo = document.querySelector('input[name="modo"]:checked').value;
+  const btn  = document.getElementById('btn-importar');
+  btn.disabled = true;
+
+  document.getElementById('zona-progreso').style.display = 'block';
+  document.getElementById('log-box').innerHTML = '';
+  log('Iniciando importación...', '');
+
+  // Si modo "nuevos", cargar nombres existentes
+  let existentes = new Set();
+  if (modo === 'nuevos') {
+    log('Leyendo productos existentes en Firestore...', '');
+    const snap = await db.collection('precios').get();
+    snap.docs.forEach(d => {
+      const dat = d.data();
+      existentes.add(`${dat.marca}||${dat.nombre}`);
+    });
+    log(`→ ${existentes.size} productos ya en la base`, '');
+  }
+
+  let importados = 0, omitidos = 0, errores = 0;
+  const total = PRODUCTOS.length;
+
+  for (let i = 0; i < total; i++) {
+    const p = PRODUCTOS[i];
+    const key = `${p.marca}||${p.nombre}`;
+    const pct = Math.round(((i + 1) / total) * 100);
+    document.getElementById('barra').style.width = pct + '%';
+    document.getElementById('txt-progreso').textContent = `Importando ${i+1} / ${total} (${pct}%)`;
+
+    if (modo === 'nuevos' && existentes.has(key)) {
+      omitidos++;
+      continue;
+    }
+
+    const { mMin, mMay } = calcMargenes(p);
+    const doc = {
+      nombre:              p.nombre,
+      marca:               p.marca,
+      especie:             p.especie,
+      unidadPeso:          '',
+      costo:               p.costo,
+      precioMinorista:     p.min,
+      precioMayorista:     p.may,
+      margenMinorista:     mMin,
+      margenMayorista:     mMay,
+      ultimaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    try {
+      await db.collection('precios').add(doc);
+      importados++;
+      log(`✔ ${p.marca} — ${p.nombre}`, 'ok');
+    } catch (err) {
+      errores++;
+      log(`✘ Error en ${p.nombre}: ${err.message}`, 'err');
+    }
+
+    // Pequeña pausa para no saturar Firestore
+    if (i % 10 === 9) await new Promise(r => setTimeout(r, 300));
+  }
+
+  document.getElementById('barra').style.width = '100%';
+  document.getElementById('txt-progreso').textContent = '✅ Importación completada';
+  log('─────────────────────────────────────', '');
+  log(`✔ Importados: ${importados}`, 'ok');
+  if (omitidos) log(`⏭ Omitidos (ya existían): ${omitidos}`, 'skip');
+  if (errores)  log(`✘ Errores: ${errores}`, 'err');
+  log('Podés ir a Ver lista de precios para revisar todo.', '');
+
+  btn.disabled = false;
+}
+
+// ── INIT ─────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  actualizarStats();
+  renderPrev();
+});
+</script>
+</body>
+</html>

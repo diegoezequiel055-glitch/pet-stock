@@ -1,0 +1,702 @@
+/* =============================================
+   styles.css — Pet Stock App
+   ============================================= */
+
+/* --- Reset y base --- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --verde:       #2e7d32;
+  --verde-claro: #43a047;
+  --azul:        #1565c0;
+  --azul-claro:  #1e88e5;
+  --rojo:        #c62828;
+  --naranja:     #e65100;
+  --gris:        #546e7a;
+  --gris-claro:  #eceff1;
+  --blanco:      #ffffff;
+  --texto:       #212121;
+  --borde:       #cfd8dc;
+  --sombra:      0 2px 8px rgba(0,0,0,0.12);
+  --radio:       8px;
+}
+
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #f5f7fa;
+  color: var(--texto);
+  font-size: 15px;
+  min-height: 100vh;
+}
+
+/* --- Navegación --- */
+nav {
+  background: var(--verde);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 56px;
+  box-shadow: var(--sombra);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+nav .logo {
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  text-decoration: none;
+  margin-right: 16px;
+}
+nav a {
+  color: rgba(255,255,255,0.85);
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: var(--radio);
+  font-size: 14px;
+  transition: background .2s;
+}
+nav a:hover, nav a.activo {
+  background: rgba(255,255,255,0.18);
+  color: white;
+}
+
+/* --- Contenedor principal --- */
+.container {
+  max-width: 1100px;
+  margin: 28px auto;
+  padding: 0 16px;
+}
+
+/* --- Encabezado de página --- */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.page-header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--verde);
+}
+
+/* --- Barra de herramientas (búsqueda + filtros) --- */
+.toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.toolbar input, .toolbar select {
+  padding: 8px 12px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  font-size: 14px;
+  background: white;
+  outline: none;
+}
+.toolbar input { flex: 1; min-width: 180px; }
+.toolbar input:focus, .toolbar select:focus { border-color: var(--azul-claro); }
+
+/* --- Tabla --- */
+.tabla-wrapper {
+  background: white;
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  overflow-x: auto;
+}
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  background: var(--gris-claro);
+  padding: 11px 14px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gris);
+  white-space: nowrap;
+}
+tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--gris-claro);
+  font-size: 14px;
+  vertical-align: middle;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: #fafafa; }
+.sin-datos { text-align: center; color: var(--gris); padding: 28px !important; }
+
+/* --- Stock colores --- */
+.stock-ok    { color: var(--verde); font-weight: 600; }
+.stock-medio { color: var(--naranja); font-weight: 600; }
+.stock-bajo  { color: var(--rojo); font-weight: 600; }
+
+/* --- Tags especie --- */
+.tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.tag-perros { background: #e3f2fd; color: #1565c0; }
+.tag-gatos  { background: #fce4ec; color: #c62828; }
+.tag-ambos  { background: #e8f5e9; color: #2e7d32; }
+
+/* --- Botones --- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 9px 18px;
+  border: none;
+  border-radius: var(--radio);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .15s, transform .1s;
+  text-decoration: none;
+}
+.btn:hover   { opacity: .88; }
+.btn:active  { transform: scale(.97); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.btn-verde  { background: var(--verde);       color: white; }
+.btn-azul   { background: var(--azul);        color: white; }
+.btn-rojo   { background: var(--rojo);        color: white; }
+.btn-gris   { background: var(--gris);        color: white; }
+.btn-outline { background: white; border: 1.5px solid var(--borde); color: var(--texto); }
+
+.btn-sm { padding: 5px 11px; font-size: 12px; }
+
+.acciones { display: flex; gap: 5px; flex-wrap: wrap; }
+
+/* --- Modal --- */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 200;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
+.modal-box {
+  background: white;
+  border-radius: 12px;
+  padding: 28px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  position: relative;
+}
+.modal-box h2 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--verde);
+}
+.modal-box .subtitulo {
+  font-size: 13px;
+  color: var(--gris);
+  margin-bottom: 18px;
+}
+.cerrar-modal {
+  position: absolute;
+  top: 16px; right: 18px;
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: var(--gris);
+  line-height: 1;
+}
+
+/* --- Formularios --- */
+.form-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+.form-grupo label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gris);
+}
+.form-grupo input,
+.form-grupo select,
+.form-grupo textarea {
+  padding: 9px 12px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  font-size: 14px;
+  outline: none;
+  transition: border .2s;
+}
+.form-grupo input:focus,
+.form-grupo select:focus,
+.form-grupo textarea:focus {
+  border-color: var(--azul-claro);
+}
+.form-fila {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.form-acciones {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+/* --- Tabla de lotes (modal) --- */
+.lote-agotado { opacity: .45; }
+
+/* --- Alerta flotante global --- */
+#alerta-global {
+  display: none;
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  z-index: 999;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  white-space: nowrap;
+  max-width: 90vw;
+}
+.alerta-success { background: var(--verde);   color: white; }
+.alerta-error   { background: var(--rojo);    color: white; }
+.alerta-warning { background: var(--naranja); color: white; }
+
+/* --- Entrada con micrófono --- */
+.input-mic {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.input-mic input {
+  flex: 1;
+}
+.btn-mic {
+  background: none;
+  border: 1.5px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--gris);
+  transition: all .2s;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.btn-mic:hover { border-color: var(--verde); color: var(--verde); }
+.btn-mic.dictando { border-color: var(--rojo); color: var(--rojo); background: #fff0f0; }
+
+/* =============================================
+   DARK MODE
+   Aplicado con body.dark
+   ============================================= */
+
+body.dark {
+  --gris-claro:  #1e293b;
+  --borde:       #334155;
+  --texto:       #e2e8f0;
+  --gris:        #94a3b8;
+  --sombra:      0 2px 12px rgba(0,0,0,0.45);
+  background:    #0f172a;
+  color:         var(--texto);
+}
+
+/* Fondo de tarjetas y tablas */
+body.dark .bloque-marca,
+body.dark .tabla-wrapper,
+body.dark .modal-box,
+body.dark .card-modulo,
+body.dark .stat-box,
+body.dark .tarjeta-hoy,
+body.dark .card-accesorio {
+  background: #1e293b;
+  color: var(--texto);
+}
+
+/* Filas de tabla */
+body.dark tbody tr         { background: #1e293b; }
+body.dark tbody tr:hover   { background: #263548; }
+body.dark thead th         { background: #162032; color: var(--gris); }
+body.dark tbody td         { border-bottom-color: #334155; }
+
+/* Encabezados de marca */
+body.dark .marca-header    { background: #162032; }
+body.dark .marca-header:hover { background: #1a2a40; }
+
+/* Inputs y selects */
+body.dark input,
+body.dark select,
+body.dark textarea,
+body.dark .toolbar input,
+body.dark .toolbar select,
+body.dark .input-inline {
+  background: #0f172a;
+  color: var(--texto);
+  border-color: #334155;
+}
+body.dark input::placeholder { color: #64748b; }
+
+/* Botones outline */
+body.dark .btn-outline {
+  background: #1e293b;
+  border-color: #334155;
+  color: var(--texto);
+}
+
+/* Modal fondo */
+body.dark .modal { background: rgba(0,0,0,0.65); }
+
+/* Preview precios */
+body.dark .preview-precios { background: #162032; }
+
+/* Log box carga masiva */
+body.dark .log-box  { background: #020617; }
+
+/* Barra de selección múltiple */
+body.dark .barra-seleccion { background: #0f172a; }
+
+/* Nav superior (desktop) */
+body.dark nav:not(.nav-bottom) { background: #1e293b; }
+
+/* Nav inferior (móvil) */
+body.dark .nav-bottom { background: #1e293b; }
+
+/* Tags especie en dark */
+body.dark .tag-perros { background: #1e3a5f; color: #93c5fd; }
+body.dark .tag-gatos  { background: #3b1a2e; color: #f9a8d4; }
+body.dark .tag-ambos  { background: #1e293b; color: #94a3b8; }
+
+/* Tarjetas de ventas e index en dark mode */
+body.dark .tarjeta,
+body.dark .tarjeta-hoy {
+  background: #1e293b !important;
+  color: var(--texto);
+}
+body.dark .tarjeta .etiqueta,
+body.dark .tarjeta-hoy .etiqueta { color: #94a3b8; }
+
+body.dark .card-modulo {
+  background: #1e293b !important;
+  color: var(--texto);
+}
+body.dark .card-modulo p { color: #94a3b8; }
+
+/* ── Filas rápidas de búsqueda (lista de precios) ── */
+.fila-rapida {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: white;
+  border-radius: 10px;
+  margin-bottom: 4px;
+  box-shadow: var(--sombra);
+  cursor: pointer;
+  transition: background .12s;
+  user-select: none;
+}
+.fila-rapida:active { background: #f1f5f9; }
+.fila-rapida.abierta { border-radius: 10px 10px 0 0; margin-bottom: 0; }
+
+.fr-nombre {
+  flex: 1;
+  font-weight: 600;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fr-peso {
+  font-size: 12px;
+  color: var(--gris);
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: var(--gris-claro);
+  padding: 2px 7px;
+  border-radius: 8px;
+}
+.fr-min {
+  font-weight: 700;
+  color: var(--verde);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-size: 15px;
+}
+.fr-chevron {
+  font-size: 13px;
+  color: var(--gris);
+  flex-shrink: 0;
+  transition: transform .2s;
+  line-height: 1;
+}
+.fila-rapida.abierta .fr-chevron { transform: rotate(180deg); }
+
+.fr-detalle {
+  display: none;
+  background: #f1f5f9;
+  border-radius: 0 0 10px 10px;
+  padding: 12px 16px;
+  margin-bottom: 4px;
+  gap: 20px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--borde);
+}
+.fr-detalle.visible { display: flex; }
+
+.fr-det-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 80px;
+}
+.fr-det-item span {
+  font-size: 10px;
+  color: var(--gris);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.fr-det-item strong { font-size: 15px; }
+.fr-det-marca { color: var(--gris); font-size: 13px; margin-top: 4px; width: 100%; }
+
+/* Dark mode filas rápidas */
+body.dark .fila-rapida          { background: #1e293b; }
+body.dark .fila-rapida:active   { background: #263548; }
+body.dark .fr-detalle           { background: #162032; border-top-color: #334155; }
+body.dark .fr-peso              { background: #0f172a; }
+
+/* Buscador grande */
+#buscador-p {
+  font-size: 16px !important;
+  padding: 13px 16px !important;
+  height: 52px;
+  border-radius: 10px !important;
+}
+
+/* Toggle botón flotante */
+.toggle-tema {
+  position: fixed;
+  bottom: 76px;   /* encima del nav inferior */
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--verde);
+  color: white;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.25);
+  z-index: 400;
+  transition: background .2s, transform .15s;
+}
+.toggle-tema:hover  { opacity: .9; transform: scale(1.08); }
+body.dark .toggle-tema { background: #334155; }
+
+/* En desktop: mostrar toggle en esquina superior derecha */
+@media (min-width: 769px) {
+  .toggle-tema {
+    bottom: auto;
+    top: 10px;
+    right: 16px;
+    width: 38px;
+    height: 38px;
+    font-size: 17px;
+  }
+}
+
+/* =============================================
+   MOBILE — Navegación inferior + diseño adaptado
+   ============================================= */
+
+/* Bottom nav: oculta en desktop */
+.nav-bottom { display: none; }
+
+@media (max-width: 768px) {
+
+  /* === NAV: ocultar top, mostrar bottom === */
+  body > nav:not(.nav-bottom) { display: none; }
+
+  .nav-bottom {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--verde);
+    z-index: 300;
+    height: 60px;
+    box-shadow: 0 -2px 10px rgba(0,0,0,.18);
+  }
+  .nav-bottom .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,.7);
+    text-decoration: none;
+    font-size: 10px;
+    gap: 2px;
+    padding: 4px 0;
+    transition: background .15s, color .15s;
+  }
+  .nav-bottom .nav-item .nav-icon { font-size: 21px; line-height: 1; }
+  .nav-bottom .nav-item.activo,
+  .nav-bottom .nav-item:active {
+    color: white;
+    background: rgba(255,255,255,.18);
+  }
+
+  /* Espacio para la nav inferior */
+  body { padding-bottom: 68px; }
+
+  /* === LAYOUT === */
+  .container { margin: 12px auto; padding: 0 12px; }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .page-header > button,
+  .page-header > div { width: 100%; }
+  .page-header > div { display: flex; flex-direction: column; gap: 8px; }
+  .page-header .btn  { width: 100%; justify-content: center; }
+
+  /* === BOTONES más grandes para táctil === */
+  .btn     { min-height: 44px; }
+  .btn-sm  { min-height: 38px; padding: 6px 12px; font-size: 13px; }
+
+  /* === TOOLBAR === */
+  .toolbar { flex-direction: column; }
+  .toolbar input,
+  .toolbar select { width: 100%; min-width: unset; }
+
+  /* === TABLAS → TARJETAS === */
+  .tabla-wrapper {
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+    overflow-x: visible;
+  }
+
+  /* Bloquear display de table */
+  .tabla-wrapper table,
+  .tabla-precios          { display: block; }
+
+  .tabla-wrapper table thead,
+  .tabla-precios thead    { display: none; }
+
+  .tabla-wrapper table tbody,
+  .tabla-precios tbody    { display: block; }
+
+  /* Cada fila = tarjeta */
+  .tabla-wrapper table tr,
+  .tabla-precios tr {
+    display: block;
+    background: white;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    padding: 10px 14px;
+    box-shadow: var(--sombra);
+  }
+
+  /* Cada celda = fila con etiqueta izq y valor der */
+  .tabla-wrapper table td,
+  .tabla-precios td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--gris-claro) !important;
+    font-size: 14px;
+    gap: 8px;
+    min-height: 34px;
+  }
+  .tabla-wrapper table td:last-child,
+  .tabla-precios td:last-child { border-bottom: none !important; }
+
+  /* Etiqueta automática desde data-label */
+  .tabla-wrapper table td::before,
+  .tabla-precios td::before {
+    content: attr(data-label);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gris);
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    flex-shrink: 0;
+    min-width: 72px;
+  }
+
+  /* Celda de acciones: botones en fila */
+  .tabla-wrapper table td.acciones,
+  .tabla-precios td.acciones {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-top: 10px;
+    border-bottom: none !important;
+  }
+  .tabla-wrapper table td.acciones::before,
+  .tabla-precios td.acciones::before { display: none; }
+  .tabla-wrapper table td.acciones .btn,
+  .tabla-precios td.acciones .btn {
+    flex: 1;
+    min-width: 76px;
+    justify-content: center;
+  }
+
+  /* Celda "sin datos" */
+  .tabla-wrapper table td[colspan],
+  .tabla-precios td[colspan] {
+    justify-content: center;
+    border: none !important;
+  }
+  .tabla-wrapper table td[colspan]::before,
+  .tabla-precios td[colspan]::before { display: none; }
+
+  /* === MODALES: bottom sheet === */
+  .modal { padding: 0; align-items: flex-end; }
+  .modal-box {
+    border-radius: 20px 20px 0 0 !important;
+    max-width: 100% !important;
+    max-height: 92vh;
+    overflow-y: auto;
+    padding: 20px 16px 28px;
+  }
+
+  /* === FORMULARIOS === */
+  .form-fila { grid-template-columns: 1fr; }
+
+  /* === LISTA DE PRECIOS === */
+  .bloque-marca { margin-bottom: 10px; }
+  .marca-header { padding: 12px 14px; gap: 8px; flex-wrap: wrap; }
+  .marca-header .btn-sm { width: 100%; justify-content: center; }
+
+  /* === TARJETAS RESUMEN (Accesorios) === */
+  .tarjetas-resumen { grid-template-columns: 1fr 1fr; }
+
+  /* === ALERTA global: más arriba del nav === */
+  #alerta-global { bottom: 74px; }
+}
+

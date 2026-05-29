@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock de Bolsas — Pet Stock</title>
+  <link rel="stylesheet" href="css/styles.css?v=3">
+</head>
+<body>
+
+<!-- ===== NAVEGACIÓN ===== -->
+<nav>
+  <a class="logo" href="index.html">🐾 Pet Stock</a>
+  <a href="stock-bolsas.html" class="activo">📦 Bolsas</a>
+  <a href="accesorios.html">🧸 Accesorios</a>
+  <a href="lista-precios.html">💲 Precios</a>
+  <a href="ventas.html">📋 Ventas</a>
+  <a href="venta-local.html">🏪 Local</a>
+</nav>
+
+<!-- ===== CONTENIDO PRINCIPAL ===== -->
+<div class="container">
+
+  <!-- Encabezado -->
+  <div class="page-header">
+    <h1>📦 Stock de Bolsas</h1>
+    <button class="btn btn-verde" onclick="abrirModal('modal-producto')">
+      + Nuevo producto
+    </button>
+  </div>
+
+  <!-- Barra de búsqueda y filtro -->
+  <div class="toolbar">
+    <input type="text" id="buscador" placeholder="Buscar por nombre o marca...">
+    <select id="filtro-especie">
+      <option value="">Todas las especies</option>
+      <option value="perros">🐶 Perros</option>
+      <option value="gatos">🐱 Gatos</option>
+      <option value="ambos">Ambos</option>
+    </select>
+  </div>
+
+  <!-- Tabla de productos -->
+  <div class="tabla-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Marca</th>
+          <th>Producto</th>
+          <th>Especie</th>
+          <th>Peso</th>
+          <th>Stock</th>
+          <th>Último costo</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-productos">
+        <tr><td colspan="7" class="sin-datos">Cargando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ===== MODAL: NUEVO PRODUCTO ===== -->
+<div class="modal" id="modal-producto">
+  <div class="modal-box">
+    <button class="cerrar-modal" onclick="cerrarModal('modal-producto')">×</button>
+    <h2>Nuevo producto</h2>
+    <p class="subtitulo">Creá el producto primero, luego cargás los lotes de compra</p>
+    <form id="form-producto">
+      <div class="form-grupo">
+        <label>Marca *</label>
+        <div class="input-mic">
+          <input type="text" id="prod-marca" placeholder="Ej: Royal Canin" required>
+          <button type="button" class="btn-mic" data-mic="prod-marca" onclick="dictarCampo('prod-marca')" title="Dictar por voz">🎙️</button>
+        </div>
+      </div>
+      <div class="form-grupo">
+        <label>Nombre del producto *</label>
+        <div class="input-mic">
+          <input type="text" id="prod-nombre" placeholder="Ej: Adulto razas medianas" required>
+          <button type="button" class="btn-mic" data-mic="prod-nombre" onclick="dictarCampo('prod-nombre')" title="Dictar por voz">🎙️</button>
+        </div>
+      </div>
+      <div class="form-fila">
+        <div class="form-grupo">
+          <label>Especie *</label>
+          <select id="prod-especie" required>
+            <option value="">Seleccioná</option>
+            <option value="perros">🐶 Perros</option>
+            <option value="gatos">🐱 Gatos</option>
+            <option value="ambos">Ambos</option>
+          </select>
+        </div>
+        <div class="form-grupo">
+          <label>Unidad / Peso</label>
+          <div class="input-mic">
+            <input type="text" id="prod-peso" placeholder="Ej: 15 kg">
+            <button type="button" class="btn-mic" data-mic="prod-peso" onclick="dictarCampo('prod-peso')" title="Dictar por voz">🎙️</button>
+          </div>
+        </div>
+      </div>
+      <div class="form-acciones">
+        <button type="button" class="btn btn-outline" onclick="cerrarModal('modal-producto')">Cancelar</button>
+        <button type="submit" class="btn btn-verde">Crear producto</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ===== MODAL: AGREGAR LOTE ===== -->
+<div class="modal" id="modal-lote">
+  <div class="modal-box">
+    <button class="cerrar-modal" onclick="cerrarModal('modal-lote')">×</button>
+    <h2>Agregar lote de compra</h2>
+    <p class="subtitulo" id="lote-prod-nombre"></p>
+    <form id="form-lote">
+      <div class="form-fila">
+        <div class="form-grupo">
+          <label>Cantidad comprada *</label>
+          <input type="number" id="lote-cantidad" min="1" placeholder="Ej: 24" required>
+        </div>
+        <div class="form-grupo">
+          <label>Costo unitario ($) *</label>
+          <input type="number" id="lote-costo" min="0" step="0.01" placeholder="Ej: 15000" required>
+        </div>
+      </div>
+      <div class="form-grupo">
+        <label>Fecha de compra *</label>
+        <input type="date" id="lote-fecha" required>
+      </div>
+      <div class="form-grupo">
+        <label>Proveedor</label>
+        <input type="text" id="lote-proveedor" placeholder="Ej: Distribuidora Norte">
+      </div>
+      <div class="form-grupo">
+        <label>Notas (opcional)</label>
+        <input type="text" id="lote-notas" placeholder="Ej: precio especial por volumen">
+      </div>
+      <div class="form-acciones">
+        <button type="button" class="btn btn-outline" onclick="cerrarModal('modal-lote')">Cancelar</button>
+        <button type="submit" class="btn btn-verde">Guardar lote</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ===== MODAL: REGISTRAR VENTA ===== -->
+<div class="modal" id="modal-venta">
+  <div class="modal-box">
+    <button class="cerrar-modal" onclick="cerrarModal('modal-venta')">×</button>
+    <h2>Registrar venta</h2>
+    <p class="subtitulo">
+      <span id="venta-prod-nombre"></span> —
+      Stock disponible: <strong id="venta-stock-disp"></strong>
+    </p>
+    <form id="form-venta">
+      <div class="form-fila">
+        <div class="form-grupo">
+          <label>Cantidad *</label>
+          <input type="number" id="venta-cantidad" min="1" placeholder="Ej: 2" required>
+        </div>
+        <div class="form-grupo">
+          <label>Precio de venta unitario ($) *</label>
+          <input type="number" id="venta-precio" min="0" step="0.01" placeholder="Ej: 20000" required>
+        </div>
+      </div>
+      <div class="form-grupo">
+        <label>Cliente (opcional)</label>
+        <input type="text" id="venta-cliente" placeholder="Nombre o descripción">
+      </div>
+      <div class="form-acciones">
+        <button type="button" class="btn btn-outline" onclick="cerrarModal('modal-venta')">Cancelar</button>
+        <button type="submit" class="btn btn-azul">Confirmar venta</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ===== MODAL: VER LOTES ===== -->
+<div class="modal" id="modal-ver-lotes">
+  <div class="modal-box" style="max-width: 600px;">
+    <button class="cerrar-modal" onclick="cerrarModal('modal-ver-lotes')">×</button>
+    <h2>Lotes de compra</h2>
+    <p class="subtitulo" id="lotes-prod-nombre"></p>
+    <div class="tabla-wrapper" style="max-height: 340px; overflow-y: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha compra</th>
+            <th>Stock (rest./ini.)</th>
+            <th>Costo unit.</th>
+            <th>Valor total</th>
+            <th>Proveedor</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-lotes">
+          <tr><td colspan="5" class="sin-datos">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="form-acciones" style="margin-top: 16px;">
+      <button class="btn btn-verde" onclick="abrirModalLote(productoSeleccionadoId); cerrarModal('modal-ver-lotes')">
+        + Agregar lote
+      </button>
+      <button class="btn btn-outline" onclick="cerrarModal('modal-ver-lotes')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== SCRIPTS ===== -->
+<!-- Firebase SDK (compatibilidad con módulos ES5 — misma versión que Mi-stock-ropa) -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+<!-- Módulos propios (orden importa) -->
+<script src="js/firebase-config.js?v=3"></script>
+<script src="js/utils.js?v=3"></script>
+<script src="js/audio.js?v=3"></script>
+<script src="js/stock-bolsas.js?v=3"></script>
+<script src="js/nav-mobile.js?v=3"></script>
+
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ventas — Pet Stock</title>
+  <link rel="stylesheet" href="css/styles.css?v=3">
+  <style>
+    /* ---- Tarjetas resumen ---- */
+    .tarjetas-resumen {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .tarjeta {
+      background: white;
+      border-radius: 10px;
+      padding: 16px 18px;
+      box-shadow: var(--sombra);
+    }
+    .tarjeta .etiqueta {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--gris);
+      letter-spacing: .5px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .tarjeta .valor {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--verde);
+    }
+
+    /* ---- Filtros rápidos ---- */
+    .filtros-rapidos {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .filtros-rapidos button {
+      padding: 5px 14px;
+      border: 1.5px solid var(--borde);
+      border-radius: 20px;
+      background: white;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .filtros-rapidos button:hover,
+    .filtros-rapidos button.activo {
+      background: var(--verde);
+      color: white;
+      border-color: var(--verde);
+    }
+
+    /* ---- Tags tipo ---- */
+    .tag-bolsa { background: #e3f2fd; color: #1565c0; }
+    .tag-acc   { background: #f3e5f5; color: #6a1b9a; }
+
+    /* ---- Ganancia ---- */
+    .ganancia-pos { color: var(--verde); }
+    .ganancia-neg { color: var(--rojo); }
+    .ganancia-pos small,
+    .ganancia-neg small {
+      font-size: 11px;
+      font-weight: normal;
+      margin-left: 3px;
+      opacity: .75;
+    }
+
+    /* ---- Barra de acciones ---- */
+    .barra-acciones {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .contador-resultados {
+      font-size: 13px;
+      color: var(--gris);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== NAVEGACIÓN ===== -->
+<nav>
+  <a class="logo" href="index.html">🐾 Pet Stock</a>
+  <a href="stock-bolsas.html">📦 Bolsas</a>
+  <a href="accesorios.html">🧸 Accesorios</a>
+  <a href="lista-precios.html">💲 Precios</a>
+  <a href="ventas.html" class="activo">📋 Ventas</a>
+  <a href="venta-local.html">🏪 Local</a>
+</nav>
+
+<div class="container">
+
+  <!-- Encabezado -->
+  <div class="page-header">
+    <h1>📋 Historial de Ventas</h1>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline" onclick="exportarCSV()">⬇ Exportar CSV</button>
+      <button class="btn btn-verde" id="btn-recargar" onclick="cargarVentas()">↻ Actualizar</button>
+    </div>
+  </div>
+
+  <!-- Tarjetas resumen -->
+  <div class="tarjetas-resumen">
+    <div class="tarjeta">
+      <div class="etiqueta">Ventas</div>
+      <div class="valor" id="res-v-cantidad">—</div>
+    </div>
+    <div class="tarjeta">
+      <div class="etiqueta">Facturado</div>
+      <div class="valor" id="res-v-facturado" style="font-size:16px">—</div>
+    </div>
+    <div class="tarjeta">
+      <div class="etiqueta">Costo total</div>
+      <div class="valor" id="res-v-costo" style="font-size:16px;color:var(--gris)">—</div>
+    </div>
+    <div class="tarjeta">
+      <div class="etiqueta">Ganancia</div>
+      <div class="valor" id="res-v-ganancia" style="font-size:16px">—</div>
+    </div>
+    <div class="tarjeta">
+      <div class="etiqueta">Margen</div>
+      <div class="valor" id="res-v-margen">—</div>
+    </div>
+  </div>
+
+  <!-- Filtros rápidos por período -->
+  <div class="filtros-rapidos">
+    <span style="font-size:13px;color:var(--gris);align-self:center">Ver:</span>
+    <button onclick="filtroRapido('hoy')">Hoy</button>
+    <button onclick="filtroRapido('semana')">Esta semana</button>
+    <button onclick="filtroRapido('mes')" class="activo">Este mes</button>
+    <button onclick="filtroRapido('todo')">Todo</button>
+  </div>
+
+  <!-- Filtros combinados -->
+  <div class="toolbar" style="margin-bottom:10px">
+    <input type="text" id="buscador-v" placeholder="Buscar producto o cliente...">
+    <select id="filtro-tipo">
+      <option value="">Bolsas y accesorios</option>
+      <option value="bolsa">📦 Solo bolsas</option>
+      <option value="accesorio">🧸 Solo accesorios</option>
+    </select>
+    <input type="date" id="filtro-desde" title="Desde">
+    <input type="date" id="filtro-hasta" title="Hasta">
+  </div>
+
+  <!-- Barra con contador y exportar -->
+  <div class="barra-acciones">
+    <span class="contador-resultados" id="contador-ventas"></span>
+  </div>
+
+  <!-- Tabla de ventas -->
+  <div class="tabla-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Tipo</th>
+          <th>Producto</th>
+          <th style="text-align:center">Cant.</th>
+          <th>Precio unit.</th>
+          <th>Total</th>
+          <th>Costo</th>
+          <th>Ganancia</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-ventas">
+        <tr><td colspan="8" class="sin-datos">Cargando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ===== SCRIPTS ===== -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js?v=3"></script>
+<script src="js/utils.js?v=3"></script>
+<script src="js/ventas.js?v=3"></script>
+<script src="js/nav-mobile.js?v=3"></script>
+
+<script>
+  // Marcar botón de filtro rápido activo
+  document.querySelectorAll('.filtros-rapidos button').forEach(btn => {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.filtros-rapidos button').forEach(b => b.classList.remove('activo'));
+      this.classList.add('activo');
+    });
+  });
+
+  // Actualizar contador de resultados luego del render
+  const originalRender = renderTablaVentas;
+  window.renderTablaVentas = function(lista) {
+    originalRender(lista);
+    const el = document.getElementById('contador-ventas');
+    if (el) el.textContent = lista.length > 0 ? `${lista.length} venta${lista.length !== 1 ? 's' : ''}` : '';
+  };
+</script>
+
+</body>
+</html>

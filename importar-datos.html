@@ -1,0 +1,3076 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Importar Lista de Precios — Pet Stock</title>
+  <link rel="stylesheet" href="css/styles.css?v=3">
+</head>
+<body>
+<nav>
+  <a class="logo" href="index.html">🐾 Pet Stock</a>
+  <a href="lista-precios.html">← Volver a Lista de Precios</a>
+</nav>
+
+<div class="container" style="max-width:640px">
+  <div class="page-header" style="margin-top:20px">
+    <h1 style="color:var(--verde)">📥 Importar Lista de Precios</h1>
+  </div>
+
+  <div style="background:white;border-radius:12px;padding:28px;box-shadow:var(--sombra)">
+    <p style="margin-bottom:16px">
+      Este proceso va a importar <strong>271 productos</strong> a la colección 
+      <code>precios</code> de Firestore.
+    </p>
+    <ul style="margin-bottom:20px;padding-left:20px;line-height:2;color:#555">
+      <li>271 productos de Gatos y Perros</li>
+      <li>Marcas: Proplan, Royal Canin, Excellent, Eukanuba, Vital Can y más</li>
+      <li>Precio público y precio mayorista incluidos</li>
+      <li>Costo en $0 (no viene en la planilla — lo podés actualizar después)</li>
+    </ul>
+
+    <div id="estado" style="padding:12px 16px;border-radius:8px;background:#e8f5e9;color:#2e7d32;margin-bottom:20px;display:none"></div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-verde" id="btn-importar" onclick="iniciarImportacion()">
+        ⬆️ Importar 271 productos
+      </button>
+      <a href="lista-precios.html" class="btn btn-outline">Cancelar</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js?v=3"></script>
+<script src="js/utils.js?v=3"></script>
+<script src="js/nav-mobile.js?v=3"></script>
+<script>
+const PRODUCTOS = [
+  {
+    "nombre": "Proplan Kitten",
+    "marca": "Proplan",
+    "especie": "gatos",
+    "unidadPeso": "1 kg",
+    "costo": 0,
+    "precioMinorista": 17749,
+    "precioMayorista": 16270,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Proplan Kitten",
+    "marca": "Proplan",
+    "especie": "gatos",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 48050,
+    "precioMayorista": 44046,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Proplan Kitten",
+    "marca": "Proplan",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 104934,
+    "precioMayorista": 96190,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Proplan Gato Adulto",
+    "marca": "Proplan",
+    "especie": "gatos",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 43637,
+    "precioMayorista": 40000,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Proplan Gato Adulto",
+    "marca": "Proplan",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 95064,
+    "precioMayorista": 87142,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Proplan Gato Adulto",
+    "marca": "Proplan",
+    "especie": "gatos",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 166295,
+    "precioMayorista": 152437,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Proplan Urinary Care",
+    "marca": "Proplan",
+    "especie": "gatos",
+    "unidadPeso": "1 kg",
+    "costo": 0,
+    "precioMinorista": 18559,
+    "precioMayorista": 17013,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Proplan Urinary Care",
+    "marca": "Proplan",
+    "especie": "gatos",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 50093,
+    "precioMayorista": 45918,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Proplan Urinary Care",
+    "marca": "Proplan",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 104068,
+    "precioMayorista": 95395,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Proplan Urinary Care",
+    "marca": "Proplan",
+    "especie": "gatos",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 178118,
+    "precioMayorista": 163275,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Proplan Gato Adult +7",
+    "marca": "Proplan",
+    "especie": "gatos",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 48100,
+    "precioMayorista": 44091,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Proplan Gato Adult +7",
+    "marca": "Proplan",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 102881,
+    "precioMayorista": 94307,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Excellent Cat Adult",
+    "marca": "Excellent",
+    "especie": "gatos",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 28193,
+    "precioMayorista": 25843,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Excellent Cat Adult",
+    "marca": "Excellent",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 60742,
+    "precioMayorista": 55680,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Excellent Cat Adult",
+    "marca": "Excellent",
+    "especie": "gatos",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 117210,
+    "precioMayorista": 107442,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Excellent Cat Adulto Mantenimiento",
+    "marca": "Excellent",
+    "especie": "gatos",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 86262,
+    "precioMayorista": 79074,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Excellent Kitten",
+    "marca": "Excellent",
+    "especie": "gatos",
+    "unidadPeso": "1 kg",
+    "costo": 0,
+    "precioMinorista": 11422,
+    "precioMayorista": 10470,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Excellent Kitten",
+    "marca": "Excellent",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 67273,
+    "precioMayorista": 61667,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Excellent Urinary / Cat Sterilized",
+    "marca": "Excellent",
+    "especie": "gatos",
+    "unidadPeso": "1 kg",
+    "costo": 0,
+    "precioMinorista": 11998,
+    "precioMayorista": 10998,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Excellent Urinary / Cat Sterilized",
+    "marca": "Excellent",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 70004,
+    "precioMayorista": 64171,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Excellent Urinary Cat",
+    "marca": "Excellent",
+    "especie": "gatos",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 135049,
+    "precioMayorista": 123795,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Cat Chow Gatito",
+    "marca": "Cat Chow",
+    "especie": "gatos",
+    "unidadPeso": "8 kg",
+    "costo": 0,
+    "precioMinorista": 51528,
+    "precioMayorista": 47234,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Cat Chow Gatito",
+    "marca": "Cat Chow",
+    "especie": "gatos",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 87872,
+    "precioMayorista": 80550,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Cat Chow Carne / Pescado",
+    "marca": "Cat Chow",
+    "especie": "gatos",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 80322,
+    "precioMayorista": 73628,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Cat Chow Adulto Carne/Pescado",
+    "marca": "Cat Chow",
+    "especie": "gatos",
+    "unidadPeso": "8 kg",
+    "costo": 0,
+    "precioMinorista": 49450,
+    "precioMayorista": 45329,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Gati Pescado y Salmón / Carne y Pollo",
+    "marca": "Gati",
+    "especie": "gatos",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 46411,
+    "precioMayorista": 42544,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Performance Kitten",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 70658,
+    "precioMayorista": 64770,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Performance Cat Adult",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 66331,
+    "precioMayorista": 60804,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Fit",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "1.5 kg",
+    "costo": 0,
+    "precioMinorista": 26496,
+    "precioMayorista": 24288,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Fit",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 111166,
+    "precioMayorista": 101902,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Fit",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 187757,
+    "precioMayorista": 172110,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Sensible",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "1.5 kg",
+    "costo": 0,
+    "precioMinorista": 28350,
+    "precioMayorista": 25988,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Sensible",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 111168,
+    "precioMayorista": 101904,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Weight Care",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "1.5 kg",
+    "costo": 0,
+    "precioMinorista": 30058,
+    "precioMayorista": 27553,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Weight Care",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 118518,
+    "precioMayorista": 108642,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Urinary Care",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "1.5 kg",
+    "costo": 0,
+    "precioMinorista": 30940,
+    "precioMayorista": 28361,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Urinary Care",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 128063,
+    "precioMayorista": 117391,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Indoor",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "1.5 kg",
+    "costo": 0,
+    "precioMinorista": 28342,
+    "precioMayorista": 25980,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Indoor",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 111166,
+    "precioMayorista": 101902,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Indoor +7",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "1.5 kg",
+    "costo": 0,
+    "precioMinorista": 29771,
+    "precioMayorista": 27290,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Indoor +7",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 116771,
+    "precioMayorista": 107040,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Siamese / Persian",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "1.5 kg",
+    "costo": 0,
+    "precioMinorista": 31718,
+    "precioMayorista": 29075,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Siamese / Persian",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 116069,
+    "precioMayorista": 106396,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Kitten 36",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "1.5 kg",
+    "costo": 0,
+    "precioMinorista": 30252,
+    "precioMayorista": 27731,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Kitten 36",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 111108,
+    "precioMayorista": 101849,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Baby Cat",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "1.5 kg",
+    "costo": 0,
+    "precioMinorista": 31760,
+    "precioMayorista": 29114,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Satiety",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "1.5 kg",
+    "costo": 0,
+    "precioMinorista": 27823,
+    "precioMayorista": 25505,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Diabetic",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "1.5 kg",
+    "costo": 0,
+    "precioMinorista": 36416,
+    "precioMayorista": 33382,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Gastro Intestinal",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "2 kg",
+    "costo": 0,
+    "precioMinorista": 39434,
+    "precioMayorista": 36148,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Renal",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "2 kg",
+    "costo": 0,
+    "precioMinorista": 36078,
+    "precioMayorista": 33072,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Hypoallergenic",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "1.5 kg",
+    "costo": 0,
+    "precioMinorista": 47200,
+    "precioMayorista": 43266,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Hepatic",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "1.5 kg",
+    "costo": 0,
+    "precioMinorista": 30794,
+    "precioMayorista": 28228,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Urinary Cat S/O",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "1.5 kg",
+    "costo": 0,
+    "precioMinorista": 31717,
+    "precioMayorista": 29074,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Urinary Cat S/O",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 117125,
+    "precioMayorista": 107364,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Mature Consult",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "3.5 kg",
+    "costo": 0,
+    "precioMinorista": 67456,
+    "precioMayorista": 61834,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Weight Control (Castrado)",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "1.5 kg",
+    "costo": 0,
+    "precioMinorista": 28375,
+    "precioMayorista": 26011,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Weight Control (Castrado)",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 55063,
+    "precioMayorista": 50475,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Weight Control (Castrado)",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 111095,
+    "precioMayorista": 101837,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Weight Control (Castrado)",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "12 kg",
+    "costo": 0,
+    "precioMinorista": 161048,
+    "precioMayorista": 147628,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Pouch Instinctive x12 sobres",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "",
+    "costo": 0,
+    "precioMinorista": 35185,
+    "precioMayorista": 32253,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Pouch Intense Beauty x12 sobres",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "",
+    "costo": 0,
+    "precioMinorista": 35185,
+    "precioMayorista": 32253,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Lata Recovery RS Feline & Canine 195g",
+    "marca": "Royal Canin",
+    "especie": "gatos",
+    "unidadPeso": "",
+    "costo": 0,
+    "precioMinorista": 5730,
+    "precioMayorista": 5252,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Vital Cat Premium",
+    "marca": "Vital Cat",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 32458,
+    "precioMayorista": 29753,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Vital Cat Premium",
+    "marca": "Vital Cat",
+    "especie": "gatos",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 62846,
+    "precioMayorista": 57609,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Vital Cat Premium Urinary",
+    "marca": "Vital Cat",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 35704,
+    "precioMayorista": 32728,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Belcat",
+    "marca": "Vital Cat",
+    "especie": "gatos",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 24070,
+    "precioMayorista": 22064,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Vital Cat Balanced",
+    "marca": "Vital Cat",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 63294,
+    "precioMayorista": 58020,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Vital Cat Balanced",
+    "marca": "Vital Cat",
+    "especie": "gatos",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 105952,
+    "precioMayorista": 97122,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Vital Cat Balanced Control PH",
+    "marca": "Vital Cat",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 64254,
+    "precioMayorista": 58900,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Vital Cat Complete",
+    "marca": "Vital Cat",
+    "especie": "gatos",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 67766,
+    "precioMayorista": 62119,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Vital Cat Complete Kitten",
+    "marca": "Vital Cat",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 43902,
+    "precioMayorista": 40244,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Vital Cat Complete Kitten",
+    "marca": "Vital Cat",
+    "especie": "gatos",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 70516,
+    "precioMayorista": 64639,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Vital Cat Complete Light/Castrados",
+    "marca": "Vital Cat",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 45054,
+    "precioMayorista": 41300,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Dr Cossia Classic Cat Premium",
+    "marca": "Alimentos Varios",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 32200,
+    "precioMayorista": 29273,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Dr Cossia Boorton Mantenimiento",
+    "marca": "Alimentos Varios",
+    "especie": "gatos",
+    "unidadPeso": "8 kg",
+    "costo": 0,
+    "precioMinorista": 28600,
+    "precioMayorista": 26000,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Dr Cossia Brio Fortificado",
+    "marca": "Alimentos Varios",
+    "especie": "gatos",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 28600,
+    "precioMayorista": 26000,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Dr Cossia AP! Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 29000,
+    "precioMayorista": 26364,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Provet Total Balanced",
+    "marca": "Alimentos Varios",
+    "especie": "gatos",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 24000,
+    "precioMayorista": 21818,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Sabrositos Gato Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "gatos",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 25000,
+    "precioMayorista": 22727,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Sabrositos Gato Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "gatos",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 48000,
+    "precioMayorista": 43636,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Maintenance Criadores Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "gatos",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 37700,
+    "precioMayorista": 34273,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Raza Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "gatos",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 28600,
+    "precioMayorista": 26000,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Raza Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "gatos",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 40700,
+    "precioMayorista": 37000,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Patriota",
+    "marca": "Alimentos Varios",
+    "especie": "gatos",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 25000,
+    "precioMayorista": 22727,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Infinity Gato Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "gatos",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 30500,
+    "precioMayorista": 27727,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Whiskas Gato Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "gatos",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 47500,
+    "precioMayorista": 43182,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Agility Urinary",
+    "marca": "Alimentos Varios",
+    "especie": "gatos",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 66500,
+    "precioMayorista": 60455,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Agility Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "gatos",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 61300,
+    "precioMayorista": 55727,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Old Prince Equilibrium",
+    "marca": "Alimentos Varios",
+    "especie": "gatos",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 19200,
+    "precioMayorista": 17455,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Old Prince Equilibrium",
+    "marca": "Alimentos Varios",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 46000,
+    "precioMayorista": 41818,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Old Prince Equilibrium Urinary",
+    "marca": "Alimentos Varios",
+    "especie": "gatos",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 22200,
+    "precioMayorista": 20182,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Cat Pro Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "gatos",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 44000,
+    "precioMayorista": 40000,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Cat Pro Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "gatos",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 75000,
+    "precioMayorista": 68182,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Piedras a Granel",
+    "marca": "Sanitarios",
+    "especie": "gatos",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 12000,
+    "precioMayorista": 10909,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Piedras Sanicat (10x2kg)",
+    "marca": "Sanitarios",
+    "especie": "gatos",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 14000,
+    "precioMayorista": 12727,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Maderitas Poopy Pets",
+    "marca": "Sanitarios",
+    "especie": "gatos",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 13000,
+    "precioMayorista": 11818,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Maderitas Poopy Pets (5x5kg)",
+    "marca": "Sanitarios",
+    "especie": "gatos",
+    "unidadPeso": "25 kg",
+    "costo": 0,
+    "precioMinorista": 18000,
+    "precioMayorista": 16364,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Wondercat Neutra (6x3.6kg)",
+    "marca": "Sanitarios",
+    "especie": "gatos",
+    "unidadPeso": "",
+    "costo": 0,
+    "precioMinorista": 27500,
+    "precioMayorista": 25000,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Wondercat Perfumada (6x3.6kg)",
+    "marca": "Sanitarios",
+    "especie": "gatos",
+    "unidadPeso": "",
+    "costo": 0,
+    "precioMinorista": 30500,
+    "precioMayorista": 27727,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Wondercat Aglomerante x16kg (4x4kg)",
+    "marca": "Sanitarios",
+    "especie": "gatos",
+    "unidadPeso": "",
+    "costo": 0,
+    "precioMinorista": 27000,
+    "precioMayorista": 24545,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Wondercat Aglomerante Bidón",
+    "marca": "Sanitarios",
+    "especie": "gatos",
+    "unidadPeso": "",
+    "costo": 0,
+    "precioMinorista": 12000,
+    "precioMayorista": 10909,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Pro Plan Puppy Small",
+    "marca": "Pro Plan",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 37328,
+    "precioMayorista": 34218,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Pro Plan Puppy Small",
+    "marca": "Pro Plan",
+    "especie": "perros",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 78085,
+    "precioMayorista": 71578,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Pro Plan Puppy Medium/Large",
+    "marca": "Pro Plan",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 122990,
+    "precioMayorista": 112741,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Pro Plan Adult Small",
+    "marca": "Pro Plan",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 33826,
+    "precioMayorista": 31007,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Pro Plan Adult Small",
+    "marca": "Pro Plan",
+    "especie": "perros",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 70736,
+    "precioMayorista": 64842,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Pro Plan Adult Medium/Large",
+    "marca": "Pro Plan",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 112099,
+    "precioMayorista": 102758,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Pro Plan Active Mind Mediano",
+    "marca": "Pro Plan",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 35562,
+    "precioMayorista": 32598,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Pro Plan Active Mind Small",
+    "marca": "Pro Plan",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 37226,
+    "precioMayorista": 34124,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Pro Plan Active Mind Small",
+    "marca": "Pro Plan",
+    "especie": "perros",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 78041,
+    "precioMayorista": 71537,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Pro Plan Active Mind",
+    "marca": "Pro Plan",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 123209,
+    "precioMayorista": 112941,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Pro Plan Reduce Calorie",
+    "marca": "Pro Plan",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 37356,
+    "precioMayorista": 34243,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Pro Plan Reduce Calorie Small",
+    "marca": "Pro Plan",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 38948,
+    "precioMayorista": 35703,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Pro Plan Reduce Calorie",
+    "marca": "Pro Plan",
+    "especie": "perros",
+    "unidadPeso": "12 kg",
+    "costo": 0,
+    "precioMinorista": 103104,
+    "precioMayorista": 94512,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Pro Plan Sensitive Skin",
+    "marca": "Pro Plan",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 37182,
+    "precioMayorista": 34084,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Pro Plan Sensitive Skin",
+    "marca": "Pro Plan",
+    "especie": "perros",
+    "unidadPeso": "12 kg",
+    "costo": 0,
+    "precioMinorista": 102946,
+    "precioMayorista": 94367,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Excellent Ch&R Adult Medium",
+    "marca": "Excellent",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 67564,
+    "precioMayorista": 61933,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Excellent Ch&R Adult Medium",
+    "marca": "Excellent",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 80251,
+    "precioMayorista": 73564,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Excellent Ch&R Adult Small",
+    "marca": "Excellent",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 70393,
+    "precioMayorista": 64527,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Excellent Senior",
+    "marca": "Excellent",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 74327,
+    "precioMayorista": 68133,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Excellent Red. Calories",
+    "marca": "Excellent",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 77698,
+    "precioMayorista": 71223,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Excellent Maintenance Formula Adult",
+    "marca": "Excellent",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 61198,
+    "precioMayorista": 56098,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Excellent Adult Skin Care Cordero",
+    "marca": "Excellent",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 72968,
+    "precioMayorista": 66888,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Excellent Ch&R Puppy Medium",
+    "marca": "Excellent",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 74503,
+    "precioMayorista": 68295,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Excellent Ch&R Puppy Medium",
+    "marca": "Excellent",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 91018,
+    "precioMayorista": 83433,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Dog Chow Adulto Mediano y Grande",
+    "marca": "Dog Chow",
+    "especie": "perros",
+    "unidadPeso": "21 kg",
+    "costo": 0,
+    "precioMinorista": 56885,
+    "precioMayorista": 52144,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Dog Chow Adulto Mediano y Grande",
+    "marca": "Dog Chow",
+    "especie": "perros",
+    "unidadPeso": "8 kg",
+    "costo": 0,
+    "precioMinorista": 27600,
+    "precioMayorista": 25300,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Dog Chow Adulto Razas Pequeñas",
+    "marca": "Dog Chow",
+    "especie": "perros",
+    "unidadPeso": "21 kg",
+    "costo": 0,
+    "precioMinorista": 60088,
+    "precioMayorista": 55080,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Dog Chow Adulto Razas Pequeñas",
+    "marca": "Dog Chow",
+    "especie": "perros",
+    "unidadPeso": "8 kg",
+    "costo": 0,
+    "precioMinorista": 27600,
+    "precioMayorista": 25300,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Dog Chow Cachorro Mediano y Grande",
+    "marca": "Dog Chow",
+    "especie": "perros",
+    "unidadPeso": "21 kg",
+    "costo": 0,
+    "precioMinorista": 65021,
+    "precioMayorista": 59602,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Dog Chow Cachorro Razas Pequeñas",
+    "marca": "Dog Chow",
+    "especie": "perros",
+    "unidadPeso": "21 kg",
+    "costo": 0,
+    "precioMinorista": 68057,
+    "precioMayorista": 62385,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Dog Chow Adulto Mayores de 7 Años",
+    "marca": "Dog Chow",
+    "especie": "perros",
+    "unidadPeso": "21 kg",
+    "costo": 0,
+    "precioMinorista": 65701,
+    "precioMayorista": 60226,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Dogui Adulto",
+    "marca": "Dogui",
+    "especie": "perros",
+    "unidadPeso": "21 kg",
+    "costo": 0,
+    "precioMinorista": 43639,
+    "precioMayorista": 40003,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Dogui Cachorro",
+    "marca": "Dogui",
+    "especie": "perros",
+    "unidadPeso": "21 kg",
+    "costo": 0,
+    "precioMinorista": 47909,
+    "precioMayorista": 43916,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Performance Cachorro",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 85123,
+    "precioMayorista": 78030,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Performance Weight Control",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 78859,
+    "precioMayorista": 72288,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Performance Adult",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 78859,
+    "precioMayorista": 72288,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Performance Adult",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 100954,
+    "precioMayorista": 92541,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Mini Adulto",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 136661,
+    "precioMayorista": 125272,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Mini Adult",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 83239,
+    "precioMayorista": 76303,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Mini Adult",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "1 kg",
+    "costo": 0,
+    "precioMinorista": 12684,
+    "precioMayorista": 11627,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Mini Adult",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 35884,
+    "precioMayorista": 32893,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Mini Puppy",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 76037,
+    "precioMayorista": 69700,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Mini Puppy",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 141692,
+    "precioMayorista": 129885,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Mini Puppy",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "1 kg",
+    "costo": 0,
+    "precioMinorista": 12754,
+    "precioMayorista": 11691,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Mini Puppy",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 37442,
+    "precioMayorista": 34322,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Mini Starter",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "1 kg",
+    "costo": 0,
+    "precioMinorista": 13681,
+    "precioMayorista": 12541,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Mini Starter",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 40165,
+    "precioMayorista": 36818,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Mini Adult +8 / Mini Adult +12",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "1 kg",
+    "costo": 0,
+    "precioMinorista": 13543,
+    "precioMayorista": 12415,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Mini Adult +8 / Mini Adult +12",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 38267,
+    "precioMayorista": 35078,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Mini Weight Care",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "1 kg",
+    "costo": 0,
+    "precioMinorista": 14293,
+    "precioMayorista": 13102,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Mini Weight Care",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 40434,
+    "precioMayorista": 37064,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Mini Dermaconfort",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "1 kg",
+    "costo": 0,
+    "precioMinorista": 14052,
+    "precioMayorista": 12881,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Mini Dermaconfort",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 37930,
+    "precioMayorista": 34769,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Medium Adult",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 129814,
+    "precioMayorista": 118996,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Medium Adult",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 34080,
+    "precioMayorista": 31240,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Medium Puppy",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 37985,
+    "precioMayorista": 34819,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Medium Puppy",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 138006,
+    "precioMayorista": 126506,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Medium Adult +7",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 37338,
+    "precioMayorista": 34226,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Medium Adult +7 / +10",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 142768,
+    "precioMayorista": 130870,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Medium Dermaconfort / Weight Care",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 100135,
+    "precioMayorista": 91791,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Maxi Adult",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 129272,
+    "precioMayorista": 118500,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Maxi Adult +5 / +8",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 142171,
+    "precioMayorista": 130324,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Maxi Dermaconfort / Weight Care",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 100135,
+    "precioMayorista": 91791,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Giant Adult",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 129272,
+    "precioMayorista": 118500,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Giant Junior",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 138006,
+    "precioMayorista": 126506,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Yorkshire Adult",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 39032,
+    "precioMayorista": 35780,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Caniche Adult",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "1 kg",
+    "costo": 0,
+    "precioMinorista": 13264,
+    "precioMayorista": 12158,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Caniche Adult",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 39032,
+    "precioMayorista": 35780,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Caniche Adult",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 83348,
+    "precioMayorista": 76403,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Caniche Junior",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "1 kg",
+    "costo": 0,
+    "precioMinorista": 13902,
+    "precioMayorista": 12744,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Caniche Junior",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 42454,
+    "precioMayorista": 38916,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Bull Dog Frances Adult",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 39032,
+    "precioMayorista": 35780,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Bulldog Frances Adult",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 83348,
+    "precioMayorista": 76403,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Bulldog Frances Jr",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 42454,
+    "precioMayorista": 38916,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Ovejero Adult / Labrador Adult",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "12 kg",
+    "costo": 0,
+    "precioMinorista": 109466,
+    "precioMayorista": 100344,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Boxer Adult / Golden Adult",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "12 kg",
+    "costo": 0,
+    "precioMinorista": 109466,
+    "precioMayorista": 100344,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Renal",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 106786,
+    "precioMayorista": 97887,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Renal",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "1.5 kg",
+    "costo": 0,
+    "precioMinorista": 19780,
+    "precioMayorista": 18131,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Satiety Support",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "1.5 kg",
+    "costo": 0,
+    "precioMinorista": 20296,
+    "precioMayorista": 18604,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Satiety Support",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 81944,
+    "precioMayorista": 75116,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Satiety Support",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 146237,
+    "precioMayorista": 134050,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Gastro Intestinal",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 103975,
+    "precioMayorista": 95311,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Gastro Intestinal",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "2 kg",
+    "costo": 0,
+    "precioMinorista": 26598,
+    "precioMayorista": 24382,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Cardiac",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 121661,
+    "precioMayorista": 111522,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Cardiac",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "2 kg",
+    "costo": 0,
+    "precioMinorista": 30602,
+    "precioMayorista": 28052,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Hypoallergenic",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 123690,
+    "precioMayorista": 113382,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Hypoallergenic",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "2 kg",
+    "costo": 0,
+    "precioMinorista": 32641,
+    "precioMayorista": 29921,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Hypoallergenic Small",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "2 kg",
+    "costo": 0,
+    "precioMinorista": 33786,
+    "precioMayorista": 30970,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Urinary",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 115495,
+    "precioMayorista": 105871,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Urinary",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "1.5 kg",
+    "costo": 0,
+    "precioMinorista": 21138,
+    "precioMayorista": 19376,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Hepatic",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 116873,
+    "precioMayorista": 107133,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Hepatic",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "1.5 kg",
+    "costo": 0,
+    "precioMinorista": 21674,
+    "precioMayorista": 19868,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Vital Cat Diabetic (RC)",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 121279,
+    "precioMayorista": 111173,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Diabetic",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "2 kg",
+    "costo": 0,
+    "precioMinorista": 31112,
+    "precioMayorista": 28520,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Mobility Large",
+    "marca": "Royal Canin",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 162521,
+    "precioMayorista": 148977,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Vital Can Premium Adult",
+    "marca": "Vital Can",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 43842,
+    "precioMayorista": 40188,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Vital Can Premium Razas Pequeñas",
+    "marca": "Vital Can",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 44540,
+    "precioMayorista": 40829,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Vital Can Premium Adulto Cordero",
+    "marca": "Vital Can",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 52800,
+    "precioMayorista": 48400,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Vital Can Premium Control de Peso",
+    "marca": "Vital Can",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 48185,
+    "precioMayorista": 44169,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Belcan Adulto",
+    "marca": "Vital Can",
+    "especie": "perros",
+    "unidadPeso": "22 kg",
+    "costo": 0,
+    "precioMinorista": 29250,
+    "precioMayorista": 26812,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Balanced Puppy Medium / Large",
+    "marca": "Vital Can",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 84367,
+    "precioMayorista": 77337,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Balanced Adult Medium / Large",
+    "marca": "Vital Can",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 68830,
+    "precioMayorista": 63094,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Balanced Adult Giant",
+    "marca": "Vital Can",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 77233,
+    "precioMayorista": 70797,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Balanced Adult Cordero",
+    "marca": "Vital Can",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 67255,
+    "precioMayorista": 61651,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Balanced Senior Medium",
+    "marca": "Vital Can",
+    "especie": "perros",
+    "unidadPeso": "12 kg",
+    "costo": 0,
+    "precioMinorista": 49504,
+    "precioMayorista": 45378,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Balanced Control de Peso",
+    "marca": "Vital Can",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 85915,
+    "precioMayorista": 78756,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Balanced Adulto Mordida Pequeña",
+    "marca": "Vital Can",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 56334,
+    "precioMayorista": 51640,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Vital Can Complete Adult",
+    "marca": "Vital Can",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 53518,
+    "precioMayorista": 49058,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Vital Can Complete Puppy",
+    "marca": "Vital Can",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 59006,
+    "precioMayorista": 54089,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Vital Can Complete Light / Senior",
+    "marca": "Vital Can",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 61637,
+    "precioMayorista": 56500,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Euk. Puppy Small",
+    "marca": "Eukanuba",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 22132,
+    "precioMayorista": 20287,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Euk. Puppy Small",
+    "marca": "Eukanuba",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 84797,
+    "precioMayorista": 77730,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Euk. Puppy Medium / Puppy Large",
+    "marca": "Eukanuba",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 80609,
+    "precioMayorista": 73891,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Euk. Adult Small",
+    "marca": "Eukanuba",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 21458,
+    "precioMayorista": 19670,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Euk. Adult Small",
+    "marca": "Eukanuba",
+    "especie": "perros",
+    "unidadPeso": "7.5 kg",
+    "costo": 0,
+    "precioMinorista": 49205,
+    "precioMayorista": 45104,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Euk. Adult Small",
+    "marca": "Eukanuba",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 82678,
+    "precioMayorista": 75788,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Euk. Adult Medium",
+    "marca": "Eukanuba",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 82640,
+    "precioMayorista": 75754,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Euk. Adult Large",
+    "marca": "Eukanuba",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 79932,
+    "precioMayorista": 73271,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Euk. Senior Medium",
+    "marca": "Eukanuba",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 84306,
+    "precioMayorista": 77280,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Euk. Senior Large",
+    "marca": "Eukanuba",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 83965,
+    "precioMayorista": 76968,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Euk. Senior Small",
+    "marca": "Eukanuba",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 22852,
+    "precioMayorista": 20947,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Euk. Weight Control Medium",
+    "marca": "Eukanuba",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 89255,
+    "precioMayorista": 81817,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Euk. Weight Control Large",
+    "marca": "Eukanuba",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 90067,
+    "precioMayorista": 82562,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Dr Cossia Super Premium Criador Adult",
+    "marca": "Dr. Cossia y Provet",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 71600,
+    "precioMayorista": 65091,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Dr Cossia Premium 28% Protein Adult",
+    "marca": "Dr. Cossia y Provet",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 65000,
+    "precioMayorista": 59091,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Dr Cossia AP! Alimento Premium",
+    "marca": "Dr. Cossia y Provet",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 36000,
+    "precioMayorista": 32727,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Provet Ultra Pro 27% Protein Adult",
+    "marca": "Dr. Cossia y Provet",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 38000,
+    "precioMayorista": 34545,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Provet Ultra Pro 27% Protein Cachorro",
+    "marca": "Dr. Cossia y Provet",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 29400,
+    "precioMayorista": 26727,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Provet Total Balanced Adulto",
+    "marca": "Dr. Cossia y Provet",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 29000,
+    "precioMayorista": 26364,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Provet Total Balanced Cachorro",
+    "marca": "Dr. Cossia y Provet",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 24200,
+    "precioMayorista": 22000,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Dog Pro Adulto (Vitalcrops)",
+    "marca": "Dr. Cossia y Provet",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 55000,
+    "precioMayorista": 50000,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Maintenance Criadores Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "22 kg",
+    "costo": 0,
+    "precioMinorista": 32000,
+    "precioMayorista": 29091,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Maintenance Criadores Adult Cordero",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 48700,
+    "precioMayorista": 44273,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Maintenance Criadores Cachorro",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 29700,
+    "precioMayorista": 27000,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Voraz Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "25 kg",
+    "costo": 0,
+    "precioMinorista": 30000,
+    "precioMayorista": 27273,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Sabrositos Perro",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "22 kg",
+    "costo": 0,
+    "precioMinorista": 34000,
+    "precioMayorista": 30909,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Sabrositos Cachorro",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "18 kg",
+    "costo": 0,
+    "precioMinorista": 37200,
+    "precioMayorista": 33818,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Biopet Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 31000,
+    "precioMayorista": 28182,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Biopet Raza Pequeña",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 24600,
+    "precioMayorista": 22364,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Biopet Cachorro",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 30700,
+    "precioMayorista": 27909,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Biopet Cordero",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 38200,
+    "precioMayorista": 34727,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Old Prince Cordero Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 66000,
+    "precioMayorista": 60000,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Old Prince Cordero Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 17500,
+    "precioMayorista": 15909,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Old Prince Cordero Ad Raza Pequeña",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 75000,
+    "precioMayorista": 68182,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Old Prince Cordero Ad Raza Pequeña",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 18500,
+    "precioMayorista": 16818,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Old Prince Cordero Cachorro",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 75000,
+    "precioMayorista": 68182,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Old Prince Cordero Cachorro",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "3 kg",
+    "costo": 0,
+    "precioMinorista": 18500,
+    "precioMayorista": 16818,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Old Prince Equilibrium Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 62000,
+    "precioMayorista": 56364,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Infinity Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 41400,
+    "precioMayorista": 37636,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Infinity Raza Pequeña",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 33000,
+    "precioMayorista": 30000,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Pedigree Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "21 kg",
+    "costo": 0,
+    "precioMinorista": 60000,
+    "precioMayorista": 54545,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Pedigree Adulto Raza Pequeña",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "21 kg",
+    "costo": 0,
+    "precioMinorista": 60000,
+    "precioMayorista": 54545,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Pedigree Cachorro",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "21 kg",
+    "costo": 0,
+    "precioMinorista": 63600,
+    "precioMayorista": 57818,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Agility Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 61800,
+    "precioMayorista": 56182,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Agility Cachorro",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 71000,
+    "precioMayorista": 64545,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Zimpy Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "25 kg",
+    "costo": 0,
+    "precioMinorista": 22000,
+    "precioMayorista": 20000,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Valiant Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 28000,
+    "precioMayorista": 25455,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Dr Perrot",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 25000,
+    "precioMayorista": 22727,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Raza Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "21 kg",
+    "costo": 0,
+    "precioMinorista": 36000,
+    "precioMayorista": 32727,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Arroz con Vitaminas",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 21500,
+    "precioMayorista": 19545,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Dog Selección Adulto Mediano",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "21 kg",
+    "costo": 0,
+    "precioMinorista": 44200,
+    "precioMayorista": 40182,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Dog Selección Adulto Raza Pequeña",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "15 kg",
+    "costo": 0,
+    "precioMinorista": 33800,
+    "precioMayorista": 30727,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Dog Selección Cachorro",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "21 kg",
+    "costo": 0,
+    "precioMinorista": 50500,
+    "precioMayorista": 45909,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Gandum Perro Adulto",
+    "marca": "Alimentos Varios",
+    "especie": "perros",
+    "unidadPeso": "20 kg",
+    "costo": 0,
+    "precioMinorista": 18000,
+    "precioMayorista": 16364,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Mezcla para Gallinas",
+    "marca": "Cereales",
+    "especie": "perros",
+    "unidadPeso": "24 kg",
+    "costo": 0,
+    "precioMinorista": 16000,
+    "precioMayorista": 16000,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Mezcla para Canarios",
+    "marca": "Cereales",
+    "especie": "perros",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 19500,
+    "precioMayorista": 19500,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Alpiste",
+    "marca": "Cereales",
+    "especie": "perros",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 21800,
+    "precioMayorista": 21800,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Mijo",
+    "marca": "Cereales",
+    "especie": "perros",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 7300,
+    "precioMayorista": 7300,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Girasol",
+    "marca": "Cereales",
+    "especie": "perros",
+    "unidadPeso": "10 kg",
+    "costo": 0,
+    "precioMinorista": 14000,
+    "precioMayorista": 14000,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  },
+  {
+    "nombre": "Conejín Ganave",
+    "marca": "Cereales",
+    "especie": "perros",
+    "unidadPeso": "25 kg",
+    "costo": 0,
+    "precioMinorista": 20000,
+    "precioMayorista": 20000,
+    "margenMinorista": 0,
+    "margenMayorista": 0
+  }
+];
+
+async function iniciarImportacion() {
+  const btn    = document.getElementById('btn-importar');
+  const estado = document.getElementById('estado');
+  btn.disabled = true;
+  estado.style.display = 'block';
+  estado.style.background = '#e3f2fd';
+  estado.style.color = '#1565c0';
+
+  try {
+    const LOTE = 200;
+    let importados = 0;
+
+    for (let i = 0; i < PRODUCTOS.length; i += LOTE) {
+      const porcion = PRODUCTOS.slice(i, i + LOTE);
+      const batch   = db.batch();
+
+      for (const p of porcion) {
+        batch.set(db.collection('precios').doc(), {
+          ...p,
+          ultimaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+
+      await batch.commit();
+      importados += porcion.length;
+      estado.textContent = `⏳ Importando... ${importados} / ${PRODUCTOS.length}`;
+    }
+
+    estado.style.background = '#e8f5e9';
+    estado.style.color = '#2e7d32';
+    estado.innerHTML = `✅ <strong>${importados} productos importados correctamente.</strong> 
+      <a href="lista-precios.html" style="color:var(--verde);font-weight:700">→ Ver lista de precios</a>`;
+
+  } catch (err) {
+    console.error(err);
+    estado.style.background = '#ffebee';
+    estado.style.color = '#c62828';
+    estado.textContent = '❌ Error: ' + err.message;
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>

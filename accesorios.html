@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accesorios — Pet Stock</title>
+  <link rel="stylesheet" href="css/styles.css?v=3">
+  <style>
+    .tarjetas-resumen {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .tarjeta {
+      background: white;
+      border-radius: 10px;
+      padding: 16px 20px;
+      box-shadow: var(--sombra);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .tarjeta .etiqueta { font-size: 12px; color: var(--gris); font-weight: 600; }
+    .tarjeta .valor    { font-size: 22px; font-weight: 700; color: var(--verde); }
+    .tarjeta.alerta .valor { color: var(--rojo); }
+  </style>
+</head>
+<body>
+
+<!-- ===== NAVEGACIÓN ===== -->
+<nav>
+  <a class="logo" href="index.html">🐾 Pet Stock</a>
+  <a href="stock-bolsas.html">📦 Bolsas</a>
+  <a href="accesorios.html" class="activo">🧸 Accesorios</a>
+  <a href="lista-precios.html">💲 Precios</a>
+  <a href="ventas.html">📋 Ventas</a>
+  <a href="venta-local.html">🏪 Local</a>
+</nav>
+
+<div class="container">
+
+  <!-- Encabezado -->
+  <div class="page-header">
+    <h1>🧸 Accesorios y Farmacia</h1>
+    <button class="btn btn-verde" onclick="abrirModal('modal-acc-nuevo')">+ Nuevo producto</button>
+  </div>
+
+  <!-- Tarjetas resumen -->
+  <div class="tarjetas-resumen">
+    <div class="tarjeta">
+      <span class="etiqueta">PRODUCTOS</span>
+      <span class="valor" id="res-total-items">—</span>
+    </div>
+    <div class="tarjeta alerta">
+      <span class="etiqueta">SIN STOCK</span>
+      <span class="valor" id="res-sin-stock">—</span>
+    </div>
+    <div class="tarjeta">
+      <span class="etiqueta">VALOR EN STOCK</span>
+      <span class="valor" id="res-valor" style="font-size:16px">—</span>
+    </div>
+  </div>
+
+  <!-- Barra de búsqueda -->
+  <div class="toolbar">
+    <input type="text" id="buscador-acc" placeholder="Buscar por nombre o marca...">
+    <select id="filtro-categoria">
+      <option value="">Todas las categorías</option>
+      <option value="accesorio">🧸 Accesorio</option>
+      <option value="farmacia">💊 Farmacia</option>
+      <option value="plastico">🪣 Plástico</option>
+      <option value="colchoneta">🛏️ Colchoneta</option>
+      <option value="higiene">🧴 Higiene</option>
+      <option value="otro">📦 Otro</option>
+    </select>
+  </div>
+
+  <!-- Tabla -->
+  <div class="tabla-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Categoría</th>
+          <th>Nombre</th>
+          <th>Marca</th>
+          <th>Costo</th>
+          <th>Precio venta</th>
+          <th>Stock</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-accesorios">
+        <tr><td colspan="7" class="sin-datos">Cargando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ===== MODAL: NUEVO PRODUCTO ===== -->
+<div class="modal" id="modal-acc-nuevo">
+  <div class="modal-box">
+    <button class="cerrar-modal" onclick="cerrarModal('modal-acc-nuevo')">×</button>
+    <h2>Nuevo producto</h2>
+    <p class="subtitulo">Accesorios, farmacia, plásticos y más</p>
+    <form id="form-acc-nuevo">
+      <div class="form-grupo">
+        <label>Nombre *</label>
+        <div class="input-mic">
+          <input type="text" id="acc-nombre" placeholder="Ej: Cepillo pelo largo" required>
+          <button type="button" class="btn-mic" data-mic="acc-nombre" onclick="dictarCampo('acc-nombre')" title="Dictar por voz">🎙️</button>
+        </div>
+      </div>
+      <div class="form-fila">
+        <div class="form-grupo">
+          <label>Categoría *</label>
+          <select id="acc-categoria" required>
+            <option value="">Seleccioná</option>
+            <option value="accesorio">🧸 Accesorio</option>
+            <option value="farmacia">💊 Farmacia</option>
+            <option value="plastico">🪣 Plástico</option>
+            <option value="colchoneta">🛏️ Colchoneta</option>
+            <option value="higiene">🧴 Higiene</option>
+            <option value="otro">📦 Otro</option>
+          </select>
+        </div>
+        <div class="form-grupo">
+          <label>Marca</label>
+          <div class="input-mic">
+            <input type="text" id="acc-marca" placeholder="Ej: Petshop">
+            <button type="button" class="btn-mic" data-mic="acc-marca" onclick="dictarCampo('acc-marca')" title="Dictar por voz">🎙️</button>
+          </div>
+        </div>
+      </div>
+      <div class="form-fila">
+        <div class="form-grupo">
+          <label>Costo ($)</label>
+          <input type="number" id="acc-costo" min="0" step="0.01" placeholder="0">
+        </div>
+        <div class="form-grupo">
+          <label>Precio de venta ($)</label>
+          <input type="number" id="acc-precio" min="0" step="0.01" placeholder="0">
+        </div>
+      </div>
+      <div class="form-grupo">
+        <label>Stock inicial</label>
+        <input type="number" id="acc-stock" min="0" value="0">
+      </div>
+      <div class="form-acciones">
+        <button type="button" class="btn btn-outline" onclick="cerrarModal('modal-acc-nuevo')">Cancelar</button>
+        <button type="submit" class="btn btn-verde">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ===== MODAL: SUMAR STOCK ===== -->
+<div class="modal" id="modal-sumar-stock">
+  <div class="modal-box" style="max-width: 360px;">
+    <button class="cerrar-modal" onclick="cerrarModal('modal-sumar-stock')">×</button>
+    <h2>Sumar stock</h2>
+    <p class="subtitulo">
+      <strong id="sum-acc-nombre"></strong> —
+      Stock actual: <strong id="sum-stock-actual"></strong>
+    </p>
+    <form id="form-sumar-stock">
+      <div class="form-grupo">
+        <label>Cantidad a agregar *</label>
+        <input type="number" id="sum-cantidad" min="1" placeholder="Ej: 5" required autofocus>
+      </div>
+      <div class="form-acciones">
+        <button type="button" class="btn btn-outline" onclick="cerrarModal('modal-sumar-stock')">Cancelar</button>
+        <button type="submit" class="btn btn-verde">+ Sumar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ===== MODAL: VENTA ACCESORIO ===== -->
+<div class="modal" id="modal-venta-acc">
+  <div class="modal-box" style="max-width: 400px;">
+    <button class="cerrar-modal" onclick="cerrarModal('modal-venta-acc')">×</button>
+    <h2>Registrar venta</h2>
+    <p class="subtitulo">
+      <strong id="vacc-nombre"></strong> —
+      Stock: <strong id="vacc-stock-disp"></strong>
+    </p>
+    <form id="form-venta-acc">
+      <div class="form-fila">
+        <div class="form-grupo">
+          <label>Cantidad *</label>
+          <input type="number" id="vacc-cantidad" min="1" placeholder="1" required>
+        </div>
+        <div class="form-grupo">
+          <label>Precio unitario ($) *</label>
+          <input type="number" id="vacc-precio" min="0" step="0.01" required>
+        </div>
+      </div>
+      <div class="form-grupo">
+        <label>Cliente (opcional)</label>
+        <input type="text" id="vacc-cliente" placeholder="Nombre o descripción">
+      </div>
+      <div class="form-acciones">
+        <button type="button" class="btn btn-outline" onclick="cerrarModal('modal-venta-acc')">Cancelar</button>
+        <button type="submit" class="btn btn-azul">Confirmar venta</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ===== MODAL: EDITAR PRODUCTO ===== -->
+<div class="modal" id="modal-editar-acc">
+  <div class="modal-box">
+    <button class="cerrar-modal" onclick="cerrarModal('modal-editar-acc')">×</button>
+    <h2>Editar producto</h2>
+    <p class="subtitulo">Actualizá precios, costos o datos del producto</p>
+    <form id="form-editar-acc">
+      <div class="form-grupo">
+        <label>Nombre *</label>
+        <input type="text" id="edit-nombre" required>
+      </div>
+      <div class="form-fila">
+        <div class="form-grupo">
+          <label>Categoría</label>
+          <select id="edit-categoria">
+            <option value="accesorio">🧸 Accesorio</option>
+            <option value="farmacia">💊 Farmacia</option>
+            <option value="plastico">🪣 Plástico</option>
+            <option value="colchoneta">🛏️ Colchoneta</option>
+            <option value="higiene">🧴 Higiene</option>
+            <option value="otro">📦 Otro</option>
+          </select>
+        </div>
+        <div class="form-grupo">
+          <label>Marca</label>
+          <input type="text" id="edit-marca">
+        </div>
+      </div>
+      <div class="form-fila">
+        <div class="form-grupo">
+          <label>Costo ($)</label>
+          <input type="number" id="edit-costo" min="0" step="0.01">
+        </div>
+        <div class="form-grupo">
+          <label>Precio de venta ($)</label>
+          <input type="number" id="edit-precio" min="0" step="0.01">
+        </div>
+      </div>
+      <div class="form-acciones">
+        <button type="button" class="btn btn-outline" onclick="cerrarModal('modal-editar-acc')">Cancelar</button>
+        <button type="submit" class="btn btn-verde">Guardar cambios</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ===== SCRIPTS ===== -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js?v=3"></script>
+<script src="js/utils.js?v=3"></script>
+<script src="js/audio.js?v=3"></script>
+<script src="js/accesorios.js?v=3"></script>
+<script src="js/nav-mobile.js?v=3"></script>
+
+</body>
+</html>
