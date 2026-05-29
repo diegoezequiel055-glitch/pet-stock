@@ -27,59 +27,85 @@ const CATEGORIAS = {
 // CARGAR Y MOSTRAR
 // =============================================
 async function cargarAccesorios() {
+  const tbody = document.getElementById('tbody-accesorios');
+
   try {
     const snap = await db.collection('accesorios').orderBy('categoria').get();
-
-    // Para cada doc, si tiene variantes buscamos la subcolección
-    const docs = snap.docs;
     const items = [];
 
-    for (const doc of docs) {
-      const data = { id: doc.id, ...doc.data() };
+    for (const doc of snap.docs) {
+      try {
+        const data = { id: doc.id, ...doc.data() };
 
-      if (data.tieneVariantes) {
-        // Cargar variantes como filas hijas
-        const varSnap = await db.collection('accesorios').doc(doc.id)
-          .collection('variantes').get();
-
-        varSnap.docs.forEach(vDoc => {
+        if (data.tieneVariantes) {
+          // ── Fila PADRE primero ──────────────────────────────
           items.push({
-            id:              vDoc.id,
-            padreId:         doc.id,
-            _esPadre:        false,
-            _esVariante:     true,
-            nombrePadre:     data.nombre,
-            nombre:          `${data.nombre} — ${vDoc.data().nombre_variante}`,
-            marca:           data.marca || '',
-            categoria:       data.categoria,
-            costo:           vDoc.data().costo || 0,
-            precioVenta:     vDoc.data().precioVenta || 0,
-            stock:           vDoc.data().stock || 0,
-            nombre_variante: vDoc.data().nombre_variante
+            id:             doc.id,
+            _esPadre:       true,
+            _esVariante:    false,
+            nombre:         data.nombre || '(sin nombre)',
+            marca:          data.marca || '',
+            categoria:      data.categoria || 'otro',
+            tieneVariantes: true
           });
-        });
 
-        // Fila padre (visual, sin precio propio)
-        items.unshift({
-          id:          doc.id,
-          _esPadre:    true,
-          _esVariante: false,
-          nombre:      data.nombre,
-          marca:       data.marca || '',
-          categoria:   data.categoria,
-          tieneVariantes: true
-        });
+          // ── Luego las VARIANTES hijas ───────────────────────
+          try {
+            const varSnap = await db.collection('accesorios')
+              .doc(doc.id).collection('variantes').get();
 
-      } else {
-        items.push({ ...data, _esPadre: false, _esVariante: false });
+            varSnap.docs.forEach(vDoc => {
+              const v = vDoc.data();
+              items.push({
+                id:              vDoc.id,
+                padreId:         doc.id,
+                _esPadre:        false,
+                _esVariante:     true,
+                nombrePadre:     data.nombre || '',
+                nombre:          `${data.nombre} — ${v.nombre_variante || ''}`,
+                marca:           data.marca || '',
+                categoria:       data.categoria || 'otro',
+                costo:           v.costo || 0,
+                precioVenta:     v.precioVenta || 0,
+                stock:           v.stock || 0,
+                nombre_variante: v.nombre_variante || ''
+              });
+            });
+          } catch (errVar) {
+            console.warn(`No se pudieron cargar variantes del doc ${doc.id}:`, errVar);
+          }
+
+        } else {
+          // ── Producto SIMPLE ─────────────────────────────────
+          items.push({
+            ...data,
+            _esPadre:    false,
+            _esVariante: false,
+            nombre:      data.nombre || '(sin nombre)',
+            categoria:   data.categoria || 'otro',
+            stock:       data.stock || 0,
+            costo:       data.costo || 0,
+            precioVenta: data.precioVenta || 0
+          });
+        }
+
+      } catch (errDoc) {
+        console.warn(`Error procesando doc ${doc.id}, se omite:`, errDoc);
       }
     }
 
     accesoriosCache = items;
     renderTablaAccesorios(accesoriosCache);
     actualizarResumen(accesoriosCache);
+
   } catch (err) {
-    console.error(err);
+    console.error('Error cargando accesorios:', err);
+    // Mostrar error en tabla en lugar de dejarla en "Cargando..."
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="7" class="sin-datos" style="color:var(--rojo)">
+        ⚠️ Error al cargar. Revisá tu conexión y recargá la página.
+      </td></tr>`;
+    }
     mostrarAlerta('Error al cargar accesorios', 'error');
   }
 }
@@ -557,32 +583,4 @@ async function guardarEdicionAcc(e) {
 }
 
 // =============================================
-// BÚSQUEDA / FILTRO
-// =============================================
-function filtrarAccesorios() {
-  const texto     = normalizar(document.getElementById('buscador-acc').value);
-  const categoria = document.getElementById('filtro-categoria').value;
-
-  const filtrados = accesoriosCache.filter(a => {
-    const coincideTexto = !texto || normalizar(a.nombre + ' ' + (a.marca || '')).includes(texto);
-    const coincideCat   = !categoria || a.categoria === categoria;
-    return coincideTexto && coincideCat;
-  });
-
-  renderTablaAccesorios(filtrados);
-}
-
-// =============================================
-// INIT
-// =============================================
-document.addEventListener('DOMContentLoaded', () => {
-  cargarAccesorios();
-
-  document.getElementById('form-acc-nuevo')?.addEventListener('submit', agregarAccesorio);
-  document.getElementById('form-sumar-stock')?.addEventListener('submit', sumarStock);
-  document.getElementById('form-venta-acc')?.addEventListener('submit', registrarVentaAccesorio);
-  document.getElementById('form-editar-acc')?.addEventListener('submit', guardarEdicionAcc);
-
-  document.getElementById('buscador-acc')?.addEventListener('input', filtrarAccesorios);
-  document.getElementById('filtro-categoria')?.addEventListener('change', filtrarAccesorios);
-});
+// BÚSQUEDA / FILT

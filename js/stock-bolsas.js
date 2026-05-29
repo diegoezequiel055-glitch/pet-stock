@@ -51,7 +51,6 @@ function renderTablaProductos(lista) {
         <td data-label="Último costo">${formatPrecio(p.ultimoCosto || 0)}</td>
         <td class="acciones">
           <button class="btn btn-sm btn-verde" onclick="abrirModalLote('${p.id}')">+ Lote</button>
-          <button class="btn btn-sm btn-azul" onclick="abrirModalVenta('${p.id}')">Vender</button>
           <button class="btn btn-sm btn-gris" onclick="verLotes('${p.id}')">Ver lotes</button>
         </td>
       </tr>`;
