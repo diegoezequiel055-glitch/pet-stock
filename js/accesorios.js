@@ -29,9 +29,17 @@ const CATEGORIAS = {
 async function cargarAccesorios() {
   const tbody = document.getElementById('tbody-accesorios');
 
+  // Timeout de 10 segundos — muestra el error real si Firestore no responde
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Timeout: Firestore no respondió en 10 segundos')), 10000)
+  );
+
   try {
     // Sin orderBy para evitar requerir índice compuesto en Firestore — ordenamos en JS
-    const snap = await db.collection('accesorios').get();
+    const snap = await Promise.race([
+      db.collection('accesorios').get(),
+      timeout
+    ]);
     const items = [];
 
     for (const doc of snap.docs) {
@@ -104,13 +112,13 @@ async function cargarAccesorios() {
 
   } catch (err) {
     console.error('Error cargando accesorios:', err);
-    // Mostrar error en tabla en lugar de dejarla en "Cargando..."
     if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="7" class="sin-datos" style="color:var(--rojo)">
-        ⚠️ Error al cargar. Revisá tu conexión y recargá la página.
+      tbody.innerHTML = `<tr><td colspan="7" class="sin-datos" style="color:var(--rojo);font-size:13px;padding:20px">
+        ⚠️ ${err.message || 'Error desconocido'}<br>
+        <small style="color:#888">Revisá las reglas de Firestore o tu conexión y recargá.</small>
       </td></tr>`;
     }
-    mostrarAlerta('Error al cargar accesorios', 'error');
+    mostrarAlerta('Error al cargar accesorios: ' + (err.message || err.code || 'desconocido'), 'error');
   }
 }
 
@@ -569,12 +577,4 @@ async function guardarEdicionAcc(e) {
       await db.collection('accesorios').doc(accSeleccionadoId).update({
         nombre:      document.getElementById('edit-nombre').value.trim(),
         marca:       document.getElementById('edit-marca').value.trim(),
-        categoria:   document.getElementById('edit-categoria').value,
-        costo:       parseFloat(document.getElementById('edit-costo').value) || 0,
-        precioVenta: parseFloat(document.getElementById('edit-precio').value) || 0
-      });
-    }
-
-    mostrarAlerta('Producto actualizado', 'success');
-    cerrarModal('modal-editar-acc');
-    cargarAccesorio
+  
