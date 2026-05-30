@@ -30,7 +30,8 @@ async function cargarAccesorios() {
   const tbody = document.getElementById('tbody-accesorios');
 
   try {
-    const snap = await db.collection('accesorios').orderBy('categoria').get();
+    // Sin orderBy para evitar requerir índice compuesto en Firestore — ordenamos en JS
+    const snap = await db.collection('accesorios').get();
     const items = [];
 
     for (const doc of snap.docs) {
@@ -93,6 +94,9 @@ async function cargarAccesorios() {
         console.warn(`Error procesando doc ${doc.id}, se omite:`, errDoc);
       }
     }
+
+    // Ordenar por categoría en JS (evita índice Firestore)
+    items.sort((a, b) => (a.categoria || '').localeCompare(b.categoria || ''));
 
     accesoriosCache = items;
     renderTablaAccesorios(accesoriosCache);
@@ -573,14 +577,4 @@ async function guardarEdicionAcc(e) {
 
     mostrarAlerta('Producto actualizado', 'success');
     cerrarModal('modal-editar-acc');
-    cargarAccesorios();
-  } catch (err) {
-    console.error(err);
-    mostrarAlerta('Error al actualizar', 'error');
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-// =============================================
-// BÚSQUEDA / FILT
+    cargarAccesorio
