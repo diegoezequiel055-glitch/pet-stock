@@ -31,29 +31,39 @@ async function cargarProductos() {
 }
 
 function renderTablaProductos(lista) {
-  const tbody = document.getElementById('tbody-productos');
-  if (!tbody) return;
+  const contenedor = document.getElementById('tbody-productos');
+  if (!contenedor) return;
 
   if (lista.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="sin-datos">No hay productos cargados todavía</td></tr>';
+    contenedor.innerHTML = '<div class="sin-datos">No hay productos cargados todavia</div>';
     return;
   }
 
-  tbody.innerHTML = lista.map(p => {
-    const stockClase = p.stockTotal <= 5 ? 'stock-bajo' : p.stockTotal <= 15 ? 'stock-medio' : 'stock-ok';
-    return `
-      <tr>
-        <td data-label="Marca">${p.marca}</td>
-        <td data-label="Producto">${p.nombre}</td>
-        <td data-label="Especie"><span class="tag tag-${p.especie}">${p.especie}</span></td>
-        <td data-label="Peso">${p.unidadPeso || '-'}</td>
-        <td data-label="Stock" class="${stockClase}"><strong>${p.stockTotal ?? 0}</strong></td>
-        <td data-label="Último costo">${formatPrecio(p.ultimoCosto || 0)}</td>
-        <td class="acciones">
-          <button class="btn btn-sm btn-verde" onclick="abrirModalLote('${p.id}')">+ Lote</button>
-          <button class="btn btn-sm btn-gris" onclick="verLotes('${p.id}')">Ver lotes</button>
-        </td>
-      </tr>`;
+  contenedor.innerHTML = lista.map(p => {
+    const stock = p.stockTotal ?? 0;
+    const stockClase = stock <= 5 ? 'stock-bajo' : stock <= 15 ? 'stock-medio' : 'stock-ok';
+    const pesoTag    = p.unidadPeso ? '<span class="badge">' + p.unidadPeso + '</span>' : '';
+    const especieTag = p.especie    ? '<span class="badge">' + p.especie    + '</span>' : '';
+    return \`
+      <div class="card-bolsa">
+        <div class="card-top">
+          <div class="card-info">
+            <div class="card-titulo">\${p.marca} &mdash; \${p.nombre}</div>
+            <div class="card-badges">
+              \${pesoTag}\${especieTag}
+              <span class="badge">Costo: \${formatPrecio(p.ultimoCosto || 0)}</span>
+            </div>
+          </div>
+          <div class="card-stock-box">
+            <div class="card-stock-num \${stockClase}">\${stock}</div>
+            <div class="card-stock-lbl">stock</div>
+          </div>
+        </div>
+        <div class="card-btns">
+          <button class="btn btn-sm btn-verde" onclick="abrirModalLote('\${p.id}')">+ Lote</button>
+          <button class="btn btn-sm btn-gris"  onclick="verLotes('\${p.id}')">Ver lotes</button>
+        </div>
+      </div>\`;
   }).join('');
 }
 

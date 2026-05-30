@@ -704,3 +704,100 @@ body.dark .toggle-tema { background: #334155; }
 
   /* === ALERTA global: más arriba del nav === */
   #alerta-global {
+/* =============================================
+   CARDS COMPACTAS — Bolsas y Accesorios
+   ============================================= */
+.lista-cards { padding: 2px 0; }
+
+.card-bolsa, .card-acc {
+  background: white;
+  border-radius: 10px;
+  padding: 10px 14px 10px;
+  margin-bottom: 8px;
+  box-shadow: var(--sombra);
+}
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.card-info { flex: 1; min-width: 0; }
+.card-titulo {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--texto);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+.badge {
+  background: #f1f5f9;
+  color: #64748b;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.card-stock-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+.card-stock-num {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
+}
+.card-stock-lbl {
+  font-size: 9px;
+  color: var(--gris);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  text-align: right;
+}
+.card-btns {
+  display: flex;
+  gap: 6px;
+}
+.card-btns .btn {
+  flex: 1;
+  justify-content: center;
+  min-height: 36px;
+  font-size: 12px;
+  padding: 5px 8px;
+}
+/* Variante: indentada */
+.card-variante {
+  margin-left: 12px;
+  border-left: 3px solid #334155;
+  border-radius: 8px;
+  padding-left: 10px;
+}
+/* Padre: sin stock */
+.card-padre {
+  border-left: 3px solid var(--azul);
+}
+/* Dark mode cards */
+body.dark .card-bolsa,
+body.dark .card-acc { background: #1e293b; }
+body.dark .badge    { background: #0f172a; color: #94a3b8; }
+body.dark .card-variante { border-left-color: #475569; }
+
+/* Desktop: grid de 2 columnas */
+@media (min-width: 769px) {
+  .lista-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 10px;
+  }
+  .card-variante { margin-left: 0; }
+}

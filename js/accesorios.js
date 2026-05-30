@@ -116,74 +116,92 @@ async function cargarAccesorios() {
 // RENDER TABLA
 // =============================================
 function renderTablaAccesorios(lista) {
-  const tbody = document.getElementById('tbody-accesorios');
-  if (!tbody) return;
+  var contenedor = document.getElementById('tbody-accesorios');
+  if (!contenedor) return;
 
   if (lista.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="sin-datos">No hay productos cargados todavía</td></tr>';
+    contenedor.innerHTML = '<div class="sin-datos">No hay productos cargados todavia</div>';
     return;
   }
 
-  tbody.innerHTML = lista.map(function(a) {
+  contenedor.innerHTML = lista.map(function(a) {
 
-    // Fila PADRE
+    // ---- PADRE ----
     if (a._esPadre) {
-      return '<tr style="background:var(--verde-claro,#e8f5e9)">' +
-        '<td data-label="Categoría">' + (CATEGORIAS[a.categoria] || a.categoria) + '</td>' +
-        '<td data-label="Nombre" colspan="3"><strong>📦 ' + a.nombre + '</strong>' +
-          '<small style="color:#666;margin-left:6px">con variantes</small></td>' +
-        '<td data-label="Precio venta">—</td>' +
-        '<td data-label="Stock">—</td>' +
-        '<td class="acciones">' +
-          '<button class="btn btn-sm btn-gris" onclick="abrirModalEditarPadre(\'' + a.id + '\')">Editar</button>' +
-        '</td>' +
-        '</tr>';
+      var nVar = lista.filter(function(x){ return x._esVariante && x.padreId === a.id; }).length;
+      return '<div class="card-acc card-padre">' +
+        '<div class="card-top">' +
+          '<div class="card-info">' +
+            '<div class="card-titulo">' + a.nombre + '</div>' +
+            '<div class="card-badges">' +
+              '<span class="badge">' + (CATEGORIAS[a.categoria] || a.categoria) + '</span>' +
+              (a.marca ? '<span class="badge">' + a.marca + '</span>' : '') +
+              '<span class="badge">' + nVar + ' variante' + (nVar !== 1 ? 's' : '') + '</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="card-btns">' +
+          '<button class="btn btn-sm btn-gris" onclick="abrirModalEditarPadre(\'' + a.id + '\')">Editar grupo</button>' +
+        '</div>' +
+      '</div>';
     }
 
-    // Fila VARIANTE
+    // ---- VARIANTE ----
     if (a._esVariante) {
-      var stockClaseV = a.stock <= 2 ? 'stock-bajo' : a.stock <= 8 ? 'stock-medio' : 'stock-ok';
-      var gananciaV   = a.precioVenta - a.costo;
-      var margenV     = a.costo > 0 ? Math.round((gananciaV / a.costo) * 100) : 0;
-      return '<tr style="background:#fafafa">' +
-        '<td data-label="Categoría" style="padding-left:24px;color:#888;font-size:12px">↳ variante</td>' +
-        '<td data-label="Nombre" style="padding-left:24px">' + a.nombre_variante + '</td>' +
-        '<td data-label="Marca">' + (a.marca || '-') + '</td>' +
-        '<td data-label="Costo">' + formatPrecio(a.costo) + '</td>' +
-        '<td data-label="Precio venta">' + formatPrecio(a.precioVenta) +
-          '<small style="color:#888"> (+' + margenV + '%)</small></td>' +
-        '<td data-label="Stock" class="' + stockClaseV + '"><strong>' + (a.stock || 0) + '</strong></td>' +
-        '<td class="acciones">' +
-          '<button class="btn btn-sm btn-verde" onclick="abrirModalSumarStockVariante(\'' + a.padreId + '\',\'' + a.id + '\')">+ Stock</button> ' +
+      var stV = a.stock || 0;
+      var clV = stV <= 2 ? 'stock-bajo' : stV <= 8 ? 'stock-medio' : 'stock-ok';
+      var mV  = a.costo > 0 ? Math.round(((a.precioVenta - a.costo) / a.costo) * 100) : 0;
+      return '<div class="card-acc card-variante">' +
+        '<div class="card-top">' +
+          '<div class="card-info">' +
+            '<div class="card-titulo">' + a.nombre_variante + '</div>' +
+            '<div class="card-badges">' +
+              '<span class="badge">Costo: ' + formatPrecio(a.costo) + '</span>' +
+              '<span class="badge">Venta: ' + formatPrecio(a.precioVenta) + ' (+' + mV + '%)</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="card-stock-box">' +
+            '<div class="card-stock-num ' + clV + '">' + stV + '</div>' +
+            '<div class="card-stock-lbl">stock</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="card-btns">' +
+          '<button class="btn btn-sm btn-verde" onclick="abrirModalSumarStockVariante(\'' + a.padreId + '\',\'' + a.id + '\')">+ Stock</button>' +
           '<button class="btn btn-sm btn-gris"  onclick="abrirModalEditarVariante(\'' + a.padreId + '\',\'' + a.id + '\')">Editar</button>' +
-        '</td>' +
-        '</tr>';
+        '</div>' +
+      '</div>';
     }
 
-    // Fila SIMPLE
-    var stockClase = a.stock <= 2 ? 'stock-bajo' : a.stock <= 8 ? 'stock-medio' : 'stock-ok';
-    var ganancia   = a.precioVenta - a.costo;
-    var margen     = a.costo > 0 ? Math.round((ganancia / a.costo) * 100) : 0;
-    return '<tr>' +
-      '<td data-label="Categoría">' + (CATEGORIAS[a.categoria] || a.categoria) + '</td>' +
-      '<td data-label="Nombre">' + a.nombre + '</td>' +
-      '<td data-label="Marca">' + (a.marca || '-') + '</td>' +
-      '<td data-label="Costo">' + formatPrecio(a.costo) + '</td>' +
-      '<td data-label="Precio venta">' + formatPrecio(a.precioVenta) +
-        '<small style="color:#888"> (+' + margen + '%)</small></td>' +
-      '<td data-label="Stock" class="' + stockClase + '"><strong>' + (a.stock || 0) + '</strong></td>' +
-      '<td class="acciones">' +
-        '<button class="btn btn-sm btn-verde" onclick="abrirModalSumarStock(\'' + a.id + '\')">+ Stock</button> ' +
+    // ---- SIMPLE ----
+    var stS = a.stock || 0;
+    var clS = stS <= 2 ? 'stock-bajo' : stS <= 8 ? 'stock-medio' : 'stock-ok';
+    var mS  = a.costo > 0 ? Math.round(((a.precioVenta - a.costo) / a.costo) * 100) : 0;
+    return '<div class="card-acc">' +
+      '<div class="card-top">' +
+        '<div class="card-info">' +
+          '<div class="card-titulo">' + a.nombre + '</div>' +
+          '<div class="card-badges">' +
+            '<span class="badge">' + (CATEGORIAS[a.categoria] || a.categoria) + '</span>' +
+            (a.marca ? '<span class="badge">' + a.marca + '</span>' : '') +
+            '<span class="badge">Costo: ' + formatPrecio(a.costo) + '</span>' +
+            '<span class="badge">Venta: ' + formatPrecio(a.precioVenta) + ' (+' + mS + '%)</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="card-stock-box">' +
+          '<div class="card-stock-num ' + clS + '">' + stS + '</div>' +
+          '<div class="card-stock-lbl">stock</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="card-btns">' +
+        '<button class="btn btn-sm btn-verde" onclick="abrirModalSumarStock(\'' + a.id + '\')">+ Stock</button>' +
         '<button class="btn btn-sm btn-gris"  onclick="abrirModalEditarAcc(\'' + a.id + '\')">Editar</button>' +
-      '</td>' +
-      '</tr>';
+      '</div>' +
+    '</div>';
 
   }).join('');
 }
 
-// =============================================
-// RESUMEN
-// =============================================
+
 function actualizarResumen(lista) {
   var items      = lista.filter(function(a) { return !a._esPadre; });
   var totalItems = items.length;
