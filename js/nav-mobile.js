@@ -8,12 +8,12 @@
   const pagina = window.location.pathname.split('/').pop() || 'index.html';
 
   const items = [
-    { href: 'index.html',         icon: '🐾', label: 'Inicio'  },
-    { href: 'stock-bolsas.html',  icon: '📦', label: 'Bolsas'  },
-    { href: 'accesorios.html',    icon: '🧸', label: 'Acces.'  },
-    { href: 'lista-precios.html', icon: '💲', label: 'Precios' },
-    { href: 'ventas.html',        icon: '📋', label: 'Ventas'  },
-    { href: 'venta-local.html',   icon: '🏪', label: 'Local'   }
+    { href: 'index.html',         icon: '🐾', label: 'Inicio'    },
+    { href: 'stock-bolsas.html',  icon: '📦', label: 'Bolsas'    },
+    { href: 'accesorios.html',    icon: '🧸', label: 'Acces.'    },
+    { href: 'lista-precios.html', icon: '💲', label: 'Precios'   },
+    { href: 'vender.html',        icon: '🛒', label: 'Vender'    },
+    { href: 'ventas.html',        icon: '📋', label: 'Historial' }
   ];
 
   // ── Crear nav inferior ───────────────────────────────
@@ -97,6 +97,4 @@
     aplicarTema(ahora);
   });
 
-  document.body.appendChild(btn);
-
-})();
+  document.body.appendChild(b
