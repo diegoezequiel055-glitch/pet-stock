@@ -115,78 +115,71 @@ async function cargarAccesorios() {
 // =============================================
 // RENDER TABLA
 // =============================================
-function toggleAcordeonAcc(header) {
-  var body = header.nextElementSibling;
-  var abierto = header.classList.contains('abierto');
-  document.querySelectorAll('.acord-header.abierto').forEach(function(h) {
-    h.classList.remove('abierto');
-    h.nextElementSibling.classList.remove('abierto');
-  });
-  if (!abierto) {
-    header.classList.add('abierto');
-    body.classList.add('abierto');
-  }
+function togglePanelAcc(header) {
+  var panel = header.nextElementSibling;
+  var arrow = header.querySelector('.tw-arrow');
+  panel.classList.toggle('hidden');
+  if (arrow) arrow.style.transform = panel.classList.contains('hidden') ? '' : 'rotate(180deg)';
 }
 
 function renderTablaAccesorios(lista) {
   var contenedor = document.getElementById('tbody-accesorios');
   if (!contenedor) return;
   if (lista.length === 0) {
-    contenedor.innerHTML = '<div class="sin-datos">No hay productos cargados todavia</div>';
+    contenedor.innerHTML = '<p class="text-center text-gray-400 py-8">No hay productos cargados</p>';
     return;
   }
 
-  // Separar padres, simples y variantes
-  var padres   = lista.filter(function(a) { return a._esPadre; });
-  var simples  = lista.filter(function(a) { return !a._esPadre && !a._esVariante; });
-  var getVars  = function(padreId) { return lista.filter(function(a) { return a._esVariante && a.padreId === padreId; }); };
-
+  var padres  = lista.filter(function(a) { return a._esPadre; });
+  var simples = lista.filter(function(a) { return !a._esPadre && !a._esVariante; });
+  var getVars = function(pid) { return lista.filter(function(a) { return a._esVariante && a.padreId === pid; }); };
   var html = '';
 
-  // ---- PADRES con variantes embebidas ----
-  padres.forEach(function(padre) {
-    var vars = getVars(padre.id);
-    var nV   = vars.length;
+  // ---- PADRES ----
+  padres.forEach(function(p) {
+    var vars = getVars(p.id);
+    var nV = vars.length;
     var varsHtml = vars.map(function(v) {
       var stV = v.stock || 0;
-      var clV = stV <= 2 ? 'stock-bajo' : stV <= 8 ? 'stock-medio' : 'stock-ok';
+      var scV = stV <= 2 ? 'text-red-500' : stV <= 8 ? 'text-orange-500' : 'text-emerald-400';
       var mV  = v.costo > 0 ? Math.round(((v.precioVenta - v.costo) / v.costo) * 100) : 0;
-      return '<div class="acord-variante">'
-        + '<div class="acord-variante-top">'
-          + '<span class="acord-variante-nombre">' + v.nombre_variante + '</span>'
-          + '<span class="acord-variante-stock ' + clV + '">' + stV + ' u.</span>'
+      return '<div class="bg-slate-800 rounded-lg p-3 mb-2">'
+        + '<div class="flex items-center justify-between mb-2">'
+          + '<span class="text-white font-bold text-sm">' + v.nombre_variante + '</span>'
+          + '<span class="text-base font-black ' + scV + '">' + stV + ' u.</span>'
         + '</div>'
-        + '<div class="acord-variante-meta">'
-          + '<span class="acord-badge">Costo: ' + formatPrecio(v.costo) + '</span>'
-          + '<span class="acord-badge">Venta: ' + formatPrecio(v.precioVenta) + ' (+' + mV + '%)</span>'
+        + '<div class="flex flex-wrap gap-1 mb-2">'
+          + '<span class="bg-gray-700 text-gray-300 px-2 py-0.5 rounded text-xs">Costo: ' + formatPrecio(v.costo) + '</span>'
+          + '<span class="bg-gray-700 text-gray-300 px-2 py-0.5 rounded text-xs">Venta: ' + formatPrecio(v.precioVenta) + ' (+' + mV + '%)</span>'
         + '</div>'
-        + '<div class="acord-variante-btns">'
-          + '<button class="btn btn-sm btn-verde" onclick="abrirModalSumarStockVariante(\'' + padre.id + '\',\'' + v.id + '\')">+ Stock</button>'
-          + '<button class="btn btn-sm btn-gris"  onclick="abrirModalEditarVariante(\'' + padre.id + '\',\'' + v.id + '\')">Editar</button>'
+        + '<div class="flex gap-2">'
+          + '<button class="btn btn-sm btn-verde flex-1" onclick="abrirModalSumarStockVariante(\'' + p.id + '\',\'' + v.id + '\')">+ Stock</button>'
+          + '<button class="btn btn-sm btn-gris flex-1" onclick="abrirModalEditarVariante(\'' + p.id + '\',\'' + v.id + '\')">Editar</button>'
         + '</div>'
       + '</div>';
     }).join('');
 
-    html += '<div class="acord-card">'
-      + '<div class="acord-header" onclick="toggleAcordeonAcc(this)">'
-        + '<div class="acord-main">'
-          + '<span class="acord-marca">' + padre.nombre + '</span>'
-          + '<span class="acord-nombre">' + (padre.marca || '') + '</span>'
+    var catLabel = CATEGORIAS[p.categoria] || p.categoria;
+    html += '<div class="mb-2 rounded-lg overflow-hidden">'
+      + '<div class="flex items-center justify-between p-3 bg-[#1e293b] border border-gray-800 rounded-lg cursor-pointer hover:bg-slate-800 transition-colors" onclick="togglePanelAcc(this)">'
+        + '<div class="flex flex-col space-y-1">'
+          + '<div class="flex items-center space-x-2 flex-wrap">'
+            + '<span class="text-white font-bold text-sm">' + p.nombre + '</span>'
+            + (p.marca ? '<span class="text-gray-400 text-sm">' + p.marca + '</span>' : '')
+          + '</div>'
+          + '<div class="flex items-center space-x-2 text-xs flex-wrap">'
+            + '<span class="bg-gray-700 text-gray-300 px-2 py-0.5 rounded">' + catLabel + '</span>'
+            + '<span class="bg-blue-900 text-blue-300 px-2 py-0.5 rounded font-medium">' + nV + ' variante' + (nV !== 1 ? 's' : '') + '</span>'
+          + '</div>'
         + '</div>'
-        + '<div class="acord-meta">'
-          + '<span class="acord-badge">' + (CATEGORIAS[padre.categoria] || padre.categoria) + '</span>'
-          + '<span class="acord-padre-label">' + nV + ' variante' + (nV !== 1 ? 's' : '') + '</span>'
-        + '</div>'
-        + '<div class="acord-right">'
-          + '<span class="acord-arrow">&#9660;</span>'
+        + '<div class="flex items-center space-x-3 pr-1">'
+          + '<span class="text-gray-500 text-xs tw-arrow transition-transform duration-200">&#9660;</span>'
         + '</div>'
       + '</div>'
-      + '<div class="acord-body">'
-        + '<div class="acord-content">'
-          + varsHtml
-          + '<div class="acord-btns" style="margin-top:' + (nV > 0 ? '8' : '0') + 'px">'
-            + '<button class="btn btn-sm btn-gris" onclick="abrirModalEditarPadre(\'' + padre.id + '\')">Editar grupo</button>'
-          + '</div>'
+      + '<div class="hidden bg-[#131c2e] p-3 border-x border-b border-gray-800 rounded-b-lg">'
+        + varsHtml
+        + '<div class="flex gap-2 mt-2">'
+          + '<button class="btn btn-sm btn-gris flex-1" onclick="abrirModalEditarPadre(\'' + p.id + '\')">Editar grupo</button>'
         + '</div>'
       + '</div>'
     + '</div>';
@@ -195,33 +188,36 @@ function renderTablaAccesorios(lista) {
   // ---- SIMPLES ----
   simples.forEach(function(a) {
     var stS = a.stock || 0;
-    var clS = stS <= 2 ? 'stock-bajo' : stS <= 8 ? 'stock-medio' : 'stock-ok';
-    var mS  = a.costo > 0 ? Math.round(((a.precioVenta - a.costo) / a.costo) * 100) : 0;
-    html += '<div class="acord-card">'
-      + '<div class="acord-header" onclick="toggleAcordeonAcc(this)">'
-        + '<div class="acord-main">'
-          + '<span class="acord-marca">' + a.nombre + '</span>'
-          + '<span class="acord-nombre">' + (a.marca || '') + '</span>'
+    var scS = stS <= 2 ? 'text-red-500' : stS <= 8 ? 'text-orange-500' : 'text-emerald-400';
+    var catLabel = CATEGORIAS[a.categoria] || a.categoria;
+    html += '<div class="mb-2 rounded-lg overflow-hidden">'
+      + '<div class="flex items-center justify-between p-3 bg-[#1e293b] border border-gray-800 rounded-lg cursor-pointer hover:bg-slate-800 transition-colors" onclick="togglePanelAcc(this)">'
+        + '<div class="flex flex-col space-y-1">'
+          + '<div class="flex items-center space-x-2 flex-wrap">'
+            + '<span class="text-white font-bold text-sm">' + a.nombre + '</span>'
+            + (a.marca ? '<span class="text-gray-400 text-sm">' + a.marca + '</span>' : '')
+          + '</div>'
+          + '<div class="flex items-center space-x-2 text-xs flex-wrap">'
+            + '<span class="bg-gray-700 text-gray-300 px-2 py-0.5 rounded">' + catLabel + '</span>'
+            + '<span class="bg-slate-900 text-emerald-400 px-2 py-0.5 rounded font-medium">' + formatPrecio(a.precioVenta) + '</span>'
+          + '</div>'
         + '</div>'
-        + '<div class="acord-meta">'
-          + '<span class="acord-badge">' + (CATEGORIAS[a.categoria] || a.categoria) + '</span>'
-          + '<span class="acord-badge">$' + (a.precioVenta || 0).toLocaleString('es-AR') + '</span>'
-        + '</div>'
-        + '<div class="acord-right">'
-          + '<span class="acord-stock ' + clS + '">' + stS + '</span>'
-          + '<span class="acord-arrow">&#9660;</span>'
+        + '<div class="flex items-center space-x-3 pr-1">'
+          + '<div class="flex flex-col items-center justify-center bg-slate-900 border border-gray-700 px-3 py-1 rounded-md min-w-[50px]">'
+            + '<span class="text-gray-400 uppercase tracking-wider font-bold" style="font-size:9px">Stock</span>'
+            + '<span class="text-base font-black ' + scS + '">' + stS + '</span>'
+          + '</div>'
+          + '<span class="text-gray-500 text-xs tw-arrow transition-transform duration-200">&#9660;</span>'
         + '</div>'
       + '</div>'
-      + '<div class="acord-body">'
-        + '<div class="acord-content">'
-          + '<div class="acord-meta" style="margin-bottom:10px">'
-            + '<span class="acord-badge">Costo: ' + formatPrecio(a.costo) + '</span>'
-            + '<span class="acord-badge">Venta: ' + formatPrecio(a.precioVenta) + ' (+' + mS + '%)</span>'
-          + '</div>'
-          + '<div class="acord-btns">'
-            + '<button class="btn btn-sm btn-verde" onclick="abrirModalSumarStock(\'' + a.id + '\')">+ Stock</button>'
-            + '<button class="btn btn-sm btn-gris"  onclick="abrirModalEditarAcc(\'' + a.id + '\')">Editar</button>'
-          + '</div>'
+      + '<div class="hidden bg-[#131c2e] p-3 border-x border-b border-gray-800 rounded-b-lg">'
+        + '<div class="flex flex-wrap gap-1 mb-3">'
+          + '<span class="bg-gray-700 text-gray-300 px-2 py-0.5 rounded text-xs">Costo: ' + formatPrecio(a.costo) + '</span>'
+          + '<span class="bg-gray-700 text-gray-300 px-2 py-0.5 rounded text-xs">Venta: ' + formatPrecio(a.precioVenta) + '</span>'
+        + '</div>'
+        + '<div class="flex gap-2">'
+          + '<button class="btn btn-sm btn-verde flex-1" onclick="abrirModalSumarStock(\'' + a.id + '\')">+ Stock</button>'
+          + '<button class="btn btn-sm btn-gris flex-1" onclick="abrirModalEditarAcc(\'' + a.id + '\')">Editar</button>'
         + '</div>'
       + '</div>'
     + '</div>';

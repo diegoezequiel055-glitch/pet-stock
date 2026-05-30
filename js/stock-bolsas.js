@@ -30,51 +30,55 @@ async function cargarProductos() {
   }
 }
 
-function toggleAcordeon(header) {
-  var body = header.nextElementSibling;
-  var abierto = header.classList.contains('abierto');
-  document.querySelectorAll('.acord-header.abierto').forEach(function(h) {
-    h.classList.remove('abierto');
-    h.nextElementSibling.classList.remove('abierto');
-  });
-  if (!abierto) {
-    header.classList.add('abierto');
-    body.classList.add('abierto');
-  }
+function togglePanel(header) {
+  var panel = header.nextElementSibling;
+  var arrow = header.querySelector('.tw-arrow');
+  panel.classList.toggle('hidden');
+  if (arrow) arrow.style.transform = panel.classList.contains('hidden') ? '' : 'rotate(180deg)';
 }
 
 function renderTablaProductos(lista) {
   var contenedor = document.getElementById('tbody-productos');
   if (!contenedor) return;
   if (lista.length === 0) {
-    contenedor.innerHTML = '<div class="sin-datos">No hay productos cargados todavia</div>';
+    contenedor.innerHTML = '<p class="text-center text-gray-400 py-8">No hay productos cargados</p>';
     return;
   }
   contenedor.innerHTML = lista.map(function(p) {
     var stock = p.stockTotal != null ? p.stockTotal : 0;
-    var cl = stock <= 5 ? 'stock-bajo' : stock <= 15 ? 'stock-medio' : 'stock-ok';
-    var badges = '';
-    if (p.especie)    badges += '<span class="acord-badge">' + p.especie + '</span>';
-    if (p.unidadPeso) badges += '<span class="acord-badge">' + p.unidadPeso + '</span>';
-    badges += '<span class="acord-badge">' + formatPrecio(p.ultimoCosto || 0) + '</span>';
-    return '<div class="acord-card">'
-      + '<div class="acord-header" onclick="toggleAcordeon(this)">'
-        + '<div class="acord-main">'
-          + '<span class="acord-marca">' + p.marca + '</span>'
-          + '<span class="acord-nombre">' + p.nombre + '</span>'
+    var stockColor = stock <= 5 ? 'text-red-500' : stock <= 15 ? 'text-orange-500' : 'text-emerald-400';
+    var espBadge = p.especie
+      ? '<span class="bg-gray-700 text-gray-300 px-2 py-0.5 rounded">' + p.especie + '</span>'
+      : '';
+    var pesoBadge = p.unidadPeso
+      ? '<span class="bg-slate-900 text-emerald-400 px-2 py-0.5 rounded font-medium">' + p.unidadPeso + '</span>'
+      : '';
+    var costoStr = formatPrecio(p.ultimoCosto || 0);
+    return '<div class="mb-2 rounded-lg overflow-hidden">'
+      + '<div class="flex items-center justify-between p-3 bg-[#1e293b] border border-gray-800 rounded-lg cursor-pointer hover:bg-slate-800 transition-colors" onclick="togglePanel(this)">'
+        + '<div class="flex flex-col space-y-1">'
+          + '<div class="flex items-center space-x-2 flex-wrap">'
+            + '<span class="text-white font-bold text-sm">' + p.marca + '</span>'
+            + '<span class="text-gray-300 text-sm">&mdash; ' + p.nombre + '</span>'
+          + '</div>'
+          + '<div class="flex items-center space-x-2 text-xs flex-wrap">'
+            + espBadge
+            + pesoBadge
+            + '<span class="text-gray-400 font-semibold ml-2">Costo: ' + costoStr + '</span>'
+          + '</div>'
         + '</div>'
-        + '<div class="acord-meta">' + badges + '</div>'
-        + '<div class="acord-right">'
-          + '<span class="acord-stock ' + cl + '">' + stock + '</span>'
-          + '<span class="acord-arrow">&#9660;</span>'
+        + '<div class="flex items-center space-x-3 pr-1">'
+          + '<div class="flex flex-col items-center justify-center bg-slate-900 border border-gray-700 px-3 py-1 rounded-md min-w-[50px]">'
+            + '<span class="text-gray-400 uppercase tracking-wider font-bold" style="font-size:9px">Stock</span>'
+            + '<span class="text-base font-black ' + stockColor + '">' + stock + '</span>'
+          + '</div>'
+          + '<span class="text-gray-500 text-xs tw-arrow transition-transform duration-200">&#9660;</span>'
         + '</div>'
       + '</div>'
-      + '<div class="acord-body">'
-        + '<div class="acord-content">'
-          + '<div class="acord-btns">'
-            + '<button class="btn btn-sm btn-verde" onclick="abrirModalLote(\'' + p.id + '\')">&plus; Lote</button>'
-            + '<button class="btn btn-sm btn-gris"  onclick="verLotes(\'' + p.id + '\')" >Ver lotes</button>'
-          + '</div>'
+      + '<div class="hidden bg-[#131c2e] p-3 border-x border-b border-gray-800 rounded-b-lg">'
+        + '<div class="flex gap-2">'
+          + '<button class="btn btn-sm btn-verde flex-1" onclick="abrirModalLote(\'' + p.id + '\')">+ Lote</button>'
+          + '<button class="btn btn-sm btn-gris flex-1" onclick="verLotes(\'' + p.id + '\')">Ver lotes</button>'
         + '</div>'
       + '</div>'
     + '</div>';
