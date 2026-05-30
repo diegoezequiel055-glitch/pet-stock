@@ -30,37 +30,52 @@ async function cargarProductos() {
   }
 }
 
-function renderTablaProductos(lista) {
-  const contenedor = document.getElementById('tbody-productos');
-  if (!contenedor) return;
+function toggleAcordeon(header) {
+  var body = header.nextElementSibling;
+  var abierto = header.classList.contains('abierto');
+  document.querySelectorAll('.acord-header.abierto').forEach(function(h) {
+    h.classList.remove('abierto');
+    h.nextElementSibling.classList.remove('abierto');
+  });
+  if (!abierto) {
+    header.classList.add('abierto');
+    body.classList.add('abierto');
+  }
+}
 
+function renderTablaProductos(lista) {
+  var contenedor = document.getElementById('tbody-productos');
+  if (!contenedor) return;
   if (lista.length === 0) {
     contenedor.innerHTML = '<div class="sin-datos">No hay productos cargados todavia</div>';
     return;
   }
-
-  contenedor.innerHTML = lista.map(p => {
-    const stock = p.stockTotal != null ? p.stockTotal : 0;
-    const stockClase = stock <= 5 ? 'stock-bajo' : stock <= 15 ? 'stock-medio' : 'stock-ok';
-    const pesoTag    = p.unidadPeso ? '<span class="badge">' + p.unidadPeso + '</span>' : '';
-    const especieTag = p.especie    ? '<span class="badge">' + p.especie    + '</span>' : '';
-    return '<div class="card-bolsa">'
-      + '<div class="card-top">'
-        + '<div class="card-info">'
-          + '<div class="card-titulo">' + p.marca + ' — ' + p.nombre + '</div>'
-          + '<div class="card-badges">'
-            + pesoTag + especieTag
-            + '<span class="badge">Costo: ' + formatPrecio(p.ultimoCosto || 0) + '</span>'
-          + '</div>'
+  contenedor.innerHTML = lista.map(function(p) {
+    var stock = p.stockTotal != null ? p.stockTotal : 0;
+    var cl = stock <= 5 ? 'stock-bajo' : stock <= 15 ? 'stock-medio' : 'stock-ok';
+    var badges = '';
+    if (p.especie)    badges += '<span class="acord-badge">' + p.especie + '</span>';
+    if (p.unidadPeso) badges += '<span class="acord-badge">' + p.unidadPeso + '</span>';
+    badges += '<span class="acord-badge">' + formatPrecio(p.ultimoCosto || 0) + '</span>';
+    return '<div class="acord-card">'
+      + '<div class="acord-header" onclick="toggleAcordeon(this)">'
+        + '<div class="acord-main">'
+          + '<span class="acord-marca">' + p.marca + '</span>'
+          + '<span class="acord-nombre">' + p.nombre + '</span>'
         + '</div>'
-        + '<div class="card-stock-box">'
-          + '<div class="card-stock-num ' + stockClase + '">' + stock + '</div>'
-          + '<div class="card-stock-lbl">stock</div>'
+        + '<div class="acord-meta">' + badges + '</div>'
+        + '<div class="acord-right">'
+          + '<span class="acord-stock ' + cl + '">' + stock + '</span>'
+          + '<span class="acord-arrow">&#9660;</span>'
         + '</div>'
       + '</div>'
-      + '<div class="card-btns">'
-        + '<button class="btn btn-sm btn-verde" onclick="abrirModalLote(\'' + p.id + '\')">+ Lote</button>'
-        + '<button class="btn btn-sm btn-gris"  onclick="verLotes(\'' + p.id + '\')">Ver lotes</button>'
+      + '<div class="acord-body">'
+        + '<div class="acord-content">'
+          + '<div class="acord-btns">'
+            + '<button class="btn btn-sm btn-verde" onclick="abrirModalLote(\'' + p.id + '\')">&plus; Lote</button>'
+            + '<button class="btn btn-sm btn-gris"  onclick="verLotes(\'' + p.id + '\')" >Ver lotes</button>'
+          + '</div>'
+        + '</div>'
       + '</div>'
     + '</div>';
   }).join('');

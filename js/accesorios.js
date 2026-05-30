@@ -115,90 +115,119 @@ async function cargarAccesorios() {
 // =============================================
 // RENDER TABLA
 // =============================================
+function toggleAcordeonAcc(header) {
+  var body = header.nextElementSibling;
+  var abierto = header.classList.contains('abierto');
+  document.querySelectorAll('.acord-header.abierto').forEach(function(h) {
+    h.classList.remove('abierto');
+    h.nextElementSibling.classList.remove('abierto');
+  });
+  if (!abierto) {
+    header.classList.add('abierto');
+    body.classList.add('abierto');
+  }
+}
+
 function renderTablaAccesorios(lista) {
   var contenedor = document.getElementById('tbody-accesorios');
   if (!contenedor) return;
-
   if (lista.length === 0) {
     contenedor.innerHTML = '<div class="sin-datos">No hay productos cargados todavia</div>';
     return;
   }
 
-  contenedor.innerHTML = lista.map(function(a) {
+  // Separar padres, simples y variantes
+  var padres   = lista.filter(function(a) { return a._esPadre; });
+  var simples  = lista.filter(function(a) { return !a._esPadre && !a._esVariante; });
+  var getVars  = function(padreId) { return lista.filter(function(a) { return a._esVariante && a.padreId === padreId; }); };
 
-    // ---- PADRE ----
-    if (a._esPadre) {
-      var nVar = lista.filter(function(x){ return x._esVariante && x.padreId === a.id; }).length;
-      return '<div class="card-acc card-padre">' +
-        '<div class="card-top">' +
-          '<div class="card-info">' +
-            '<div class="card-titulo">' + a.nombre + '</div>' +
-            '<div class="card-badges">' +
-              '<span class="badge">' + (CATEGORIAS[a.categoria] || a.categoria) + '</span>' +
-              (a.marca ? '<span class="badge">' + a.marca + '</span>' : '') +
-              '<span class="badge">' + nVar + ' variante' + (nVar !== 1 ? 's' : '') + '</span>' +
-            '</div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="card-btns">' +
-          '<button class="btn btn-sm btn-gris" onclick="abrirModalEditarPadre(\'' + a.id + '\')">Editar grupo</button>' +
-        '</div>' +
-      '</div>';
-    }
+  var html = '';
 
-    // ---- VARIANTE ----
-    if (a._esVariante) {
-      var stV = a.stock || 0;
+  // ---- PADRES con variantes embebidas ----
+  padres.forEach(function(padre) {
+    var vars = getVars(padre.id);
+    var nV   = vars.length;
+    var varsHtml = vars.map(function(v) {
+      var stV = v.stock || 0;
       var clV = stV <= 2 ? 'stock-bajo' : stV <= 8 ? 'stock-medio' : 'stock-ok';
-      var mV  = a.costo > 0 ? Math.round(((a.precioVenta - a.costo) / a.costo) * 100) : 0;
-      return '<div class="card-acc card-variante">' +
-        '<div class="card-top">' +
-          '<div class="card-info">' +
-            '<div class="card-titulo">' + a.nombre_variante + '</div>' +
-            '<div class="card-badges">' +
-              '<span class="badge">Costo: ' + formatPrecio(a.costo) + '</span>' +
-              '<span class="badge">Venta: ' + formatPrecio(a.precioVenta) + ' (+' + mV + '%)</span>' +
-            '</div>' +
-          '</div>' +
-          '<div class="card-stock-box">' +
-            '<div class="card-stock-num ' + clV + '">' + stV + '</div>' +
-            '<div class="card-stock-lbl">stock</div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="card-btns">' +
-          '<button class="btn btn-sm btn-verde" onclick="abrirModalSumarStockVariante(\'' + a.padreId + '\',\'' + a.id + '\')">+ Stock</button>' +
-          '<button class="btn btn-sm btn-gris"  onclick="abrirModalEditarVariante(\'' + a.padreId + '\',\'' + a.id + '\')">Editar</button>' +
-        '</div>' +
-      '</div>';
-    }
+      var mV  = v.costo > 0 ? Math.round(((v.precioVenta - v.costo) / v.costo) * 100) : 0;
+      return '<div class="acord-variante">'
+        + '<div class="acord-variante-top">'
+          + '<span class="acord-variante-nombre">' + v.nombre_variante + '</span>'
+          + '<span class="acord-variante-stock ' + clV + '">' + stV + ' u.</span>'
+        + '</div>'
+        + '<div class="acord-variante-meta">'
+          + '<span class="acord-badge">Costo: ' + formatPrecio(v.costo) + '</span>'
+          + '<span class="acord-badge">Venta: ' + formatPrecio(v.precioVenta) + ' (+' + mV + '%)</span>'
+        + '</div>'
+        + '<div class="acord-variante-btns">'
+          + '<button class="btn btn-sm btn-verde" onclick="abrirModalSumarStockVariante(\'' + padre.id + '\',\'' + v.id + '\')">+ Stock</button>'
+          + '<button class="btn btn-sm btn-gris"  onclick="abrirModalEditarVariante(\'' + padre.id + '\',\'' + v.id + '\')">Editar</button>'
+        + '</div>'
+      + '</div>';
+    }).join('');
 
-    // ---- SIMPLE ----
+    html += '<div class="acord-card">'
+      + '<div class="acord-header" onclick="toggleAcordeonAcc(this)">'
+        + '<div class="acord-main">'
+          + '<span class="acord-marca">' + padre.nombre + '</span>'
+          + '<span class="acord-nombre">' + (padre.marca || '') + '</span>'
+        + '</div>'
+        + '<div class="acord-meta">'
+          + '<span class="acord-badge">' + (CATEGORIAS[padre.categoria] || padre.categoria) + '</span>'
+          + '<span class="acord-padre-label">' + nV + ' variante' + (nV !== 1 ? 's' : '') + '</span>'
+        + '</div>'
+        + '<div class="acord-right">'
+          + '<span class="acord-arrow">&#9660;</span>'
+        + '</div>'
+      + '</div>'
+      + '<div class="acord-body">'
+        + '<div class="acord-content">'
+          + varsHtml
+          + '<div class="acord-btns" style="margin-top:' + (nV > 0 ? '8' : '0') + 'px">'
+            + '<button class="btn btn-sm btn-gris" onclick="abrirModalEditarPadre(\'' + padre.id + '\')">Editar grupo</button>'
+          + '</div>'
+        + '</div>'
+      + '</div>'
+    + '</div>';
+  });
+
+  // ---- SIMPLES ----
+  simples.forEach(function(a) {
     var stS = a.stock || 0;
     var clS = stS <= 2 ? 'stock-bajo' : stS <= 8 ? 'stock-medio' : 'stock-ok';
     var mS  = a.costo > 0 ? Math.round(((a.precioVenta - a.costo) / a.costo) * 100) : 0;
-    return '<div class="card-acc">' +
-      '<div class="card-top">' +
-        '<div class="card-info">' +
-          '<div class="card-titulo">' + a.nombre + '</div>' +
-          '<div class="card-badges">' +
-            '<span class="badge">' + (CATEGORIAS[a.categoria] || a.categoria) + '</span>' +
-            (a.marca ? '<span class="badge">' + a.marca + '</span>' : '') +
-            '<span class="badge">Costo: ' + formatPrecio(a.costo) + '</span>' +
-            '<span class="badge">Venta: ' + formatPrecio(a.precioVenta) + ' (+' + mS + '%)</span>' +
-          '</div>' +
-        '</div>' +
-        '<div class="card-stock-box">' +
-          '<div class="card-stock-num ' + clS + '">' + stS + '</div>' +
-          '<div class="card-stock-lbl">stock</div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="card-btns">' +
-        '<button class="btn btn-sm btn-verde" onclick="abrirModalSumarStock(\'' + a.id + '\')">+ Stock</button>' +
-        '<button class="btn btn-sm btn-gris"  onclick="abrirModalEditarAcc(\'' + a.id + '\')">Editar</button>' +
-      '</div>' +
-    '</div>';
+    html += '<div class="acord-card">'
+      + '<div class="acord-header" onclick="toggleAcordeonAcc(this)">'
+        + '<div class="acord-main">'
+          + '<span class="acord-marca">' + a.nombre + '</span>'
+          + '<span class="acord-nombre">' + (a.marca || '') + '</span>'
+        + '</div>'
+        + '<div class="acord-meta">'
+          + '<span class="acord-badge">' + (CATEGORIAS[a.categoria] || a.categoria) + '</span>'
+          + '<span class="acord-badge">$' + (a.precioVenta || 0).toLocaleString('es-AR') + '</span>'
+        + '</div>'
+        + '<div class="acord-right">'
+          + '<span class="acord-stock ' + clS + '">' + stS + '</span>'
+          + '<span class="acord-arrow">&#9660;</span>'
+        + '</div>'
+      + '</div>'
+      + '<div class="acord-body">'
+        + '<div class="acord-content">'
+          + '<div class="acord-meta" style="margin-bottom:10px">'
+            + '<span class="acord-badge">Costo: ' + formatPrecio(a.costo) + '</span>'
+            + '<span class="acord-badge">Venta: ' + formatPrecio(a.precioVenta) + ' (+' + mS + '%)</span>'
+          + '</div>'
+          + '<div class="acord-btns">'
+            + '<button class="btn btn-sm btn-verde" onclick="abrirModalSumarStock(\'' + a.id + '\')">+ Stock</button>'
+            + '<button class="btn btn-sm btn-gris"  onclick="abrirModalEditarAcc(\'' + a.id + '\')">Editar</button>'
+          + '</div>'
+        + '</div>'
+      + '</div>'
+    + '</div>';
+  });
 
-  }).join('');
+  contenedor.innerHTML = html;
 }
 
 
