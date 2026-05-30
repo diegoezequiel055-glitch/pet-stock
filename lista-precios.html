@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lista de Precios — Pet Stock</title>
+  <link rel="stylesheet" href="css/styles.css?v=7">
+  <style>
+    /* ---- Bloques por marca ---- */
+    .bloque-marca {
+      background: white;
+      border-radius: 10px;
+      box-shadow: var(--sombra);
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .marca-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 18px;
+      background: var(--gris-claro);
+      cursor: pointer;
+      user-select: none;
+      gap: 12px;
+      transition: background .15s;
+    }
+    .marca-header:hover { background: #dde3e7; }
+    .marca-titulo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .marca-icono { font-size: 14px; color: var(--gris); width: 14px; }
+    .marca-badge {
+      font-size: 12px;
+      background: var(--verde);
+      color: white;
+      padding: 2px 9px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+    .marca-contenido { padding: 0; }
+
+    /* ---- Tabla de precios ---- */
+    .tabla-precios { width: 100%; border-collapse: collapse; }
+    .tabla-precios thead th {
+      background: #f9fbfc;
+      padding: 9px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gris);
+      text-align: left;
+      border-bottom: 1px solid var(--borde);
+    }
+    .tabla-precios tbody td {
+      padding: 9px 12px;
+      font-size: 14px;
+      border-bottom: 1px solid var(--gris-claro);
+      vertical-align: middle;
+    }
+    .tabla-precios tbody tr:last-child td { border-bottom: none; }
+    .tabla-precios tbody tr:hover { background: #fafbfc; }
+
+    /* ---- Columna checkbox ---- */
+    .check-col {
+      width: 36px;
+      text-align: center;
+      padding: 9px 6px !important;
+    }
+    .check-col input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    /* ---- Edición inline ---- */
+    .fila-editando { background: #fffde7 !important; }
+    .input-inline {
+      border: 1px solid var(--azul-claro);
+      border-radius: 5px;
+      padding: 4px 7px;
+      font-size: 13px;
+      width: 100%;
+      outline: none;
+    }
+
+    /* ---- Márgenes ---- */
+    .margen-ok   { color: var(--verde); }
+    .margen-medio { color: var(--naranja); }
+    .margen-bajo  { color: var(--rojo); }
+    .margen-tag {
+      display: inline-block;
+      margin-left: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 10px;
+      background: var(--gris-claro);
+    }
+
+    /* ---- Botones ---- */
+    .btn-naranja { background: var(--naranja); color: white; }
+    .btn-rojo    { background: var(--rojo);    color: white; }
+
+    /* ---- Botones de especie ---- */
+    .filtros-especie {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .btn-especie {
+      padding: 8px 18px;
+      border-radius: 22px;
+      border: 2px solid var(--borde);
+      background: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+      color: var(--texto);
+    }
+    .btn-especie:hover { border-color: var(--azul-claro); }
+    .btn-especie.activo-todos  { background: #1e293b; color: white; border-color: #1e293b; }
+    .btn-especie.activo-perros { background: #2563eb; color: white; border-color: #2563eb; }
+    .btn-especie.activo-gatos  { background: #7c3aed; color: white; border-color: #7c3aed; }
+
+    /* ---- Preview actualización ---- */
+    #upd-preview { max-height: 300px; overflow-y: auto; }
+
+    /* ---- Previews de precio nuevo ---- */
+    .preview-precios {
+      display: flex;
+      gap: 16px;
+      background: #e8f5e9;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-top: 4px;
+      font-size: 14px;
+    }
+    .preview-precios span { font-weight: 700; color: var(--verde); }
+
+    .txt-gris { color: var(--gris); }
+
+    /* ---- Barra de selección múltiple (fija abajo) ---- */
+    .barra-seleccion {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #1e293b;
+      color: white;
+      padding: 14px 24px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      z-index: 1000;
+      box-shadow: 0 -3px 16px rgba(0,0,0,.3);
+      flex-wrap: wrap;
+    }
+    .barra-seleccion.visible { display: flex; }
+    .barra-seleccion .btn-outline {
+      color: white;
+      border-color: rgba(255,255,255,.5);
+    }
+    .barra-seleccion .btn-outline:hover {
+      background: rgba(255,255,255,.1);
+    }
+    #texto-seleccion { font-weight: 600; font-size: 15px; }
+
+    /* Espacio inferior para que la barra no tape contenido */
+    body { padding-bottom: 70px; }
+
+    /* ---- Buscador hero ---- */
+    .buscador-hero {
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.10);
+      padding: 14px 16px 14px;
+      margin-bottom: 16px;
+      border: 2px solid var(--verde);
+    }
+    body.dark .buscador-hero {
+      background: #1e293b;
+      border-color: #2e7d32;
+    }
+    .buscador-hero-inner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .buscador-icono {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    #buscador-p {
+      flex: 1;
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+      font-size: 18px !important;
+      padding: 4px 0 !important;
+      height: auto !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      color: var(--texto);
+    }
+    body.dark #buscador-p { color: #f1f5f9; }
+    #buscador-p::placeholder { color: #aab; }
+    .buscador-limpiar {
+      background: none;
+      border: none;
+      font-size: 16px;
+      color: var(--gris);
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .buscador-limpiar:hover { background: var(--gris-claro); }
+  </style>
+</head>
+<body>
+
+<!-- ===== NAVEGACIÓN ===== -->
+<nav>
+  <a class="logo" href="index.html">🐾 Pet Stock</a>
+  <a href="stock-bolsas.html">📦 Bolsas</a>
+  <a href="accesorios.html">🧸 Accesorios</a>
+  <a href="lista-precios.html" class="activo">💲 Precios</a>
+  <a href="vender.html">🛒 Vender</a>
+  <a href="ventas.html">📋 Historial</a>
+</nav>
+
+<div class="container">
+
+  <!-- Encabezado compacto -->
+  <div class="page-header" style="margin-bottom:12px">
+    <h1>💲 Lista de Precios</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-outline" onclick="abrirModalImportarPDF()">📄 PDF</button>
+      <button class="btn btn-verde" onclick="abrirModal('modal-nuevo-precio')">+ Nuevo</button>
+    </div>
+  </div>
+
+  <!-- BUSCADOR HERO -->
+  <div class="buscador-hero">
+    <div class="buscador-hero-inner">
+      <span class="buscador-icono">🔍</span>
+      <input type="text" id="buscador-p" placeholder="Buscá un alimento..." autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="buscador-limpiar" id="btn-limpiar-busqueda" onclick="limpiarBusqueda()" style="display:none">✕</button>
+    </div>
+    <!-- Filtros de especie debajo del buscador -->
+    <div class="filtros-especie" style="margin-bottom:0;margin-top:10px">
+      <button class="btn-especie activo-todos" id="btn-todos"   onclick="filtrarEspecie('')">🐾 Todos</button>
+      <button class="btn-especie"              id="btn-perros"  onclick="filtrarEspecie('perros')">🐶 Perros</button>
+      <button class="btn-especie"              id="btn-gatos"   onclick="filtrarEspecie('gatos')">🐱 Gatos</button>
+    </div>
+  </div>
+
+  <!-- Select oculto para filtro especie -->
+  <select id="filtro-especie-p" style="display:none">
+    <option value="">Todas las especies</option>
+    <option value="perros">🐶 Perros</option>
+    <option value="gatos">🐱 Gatos</option>
+    <option value="ambos">Ambos</option>
+  </select>
+
+  <!-- Leyenda de márgenes (solo visible sin búsqueda) -->
+  <div id="leyenda-margenes" style="display:flex;gap:16px;margin-bottom:14px;margin-top:14px;font-size:13px;flex-wrap:wrap">
+    <span>Margen: </span>
+    <span class="margen-ok">● Alto (+40%)</span>
+    <span class="margen-medio">● Medio (20-40%)</span>
+    <span class="margen-bajo">● Bajo (menos de 20%)</span>
+  </div>
+
+  <!-- Contenedor dinámico agrupado por marca -->
+  <div id="contenedor-precios">
+    <p class="sin-datos" style="padding:32px;text-align:center">Cargando...</p>
+  </div>
+
+</div>
+
+
+<!-- ===== BARRA DE SELECCIÓN MÚLTIPLE (fija en la parte inferior) ===== -->
+<div class="barra-seleccion" id="barra-seleccion">
+  <span id="texto-seleccion">0 productos seleccionados</span>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn btn-outline" onclick="deseleccionarTodo()">✕ Cancelar selección</button>
+    <button class="btn btn-rojo" id="btn-eliminar-seleccionados" onclick="eliminarSeleccionados()">🗑 Eliminar seleccionados</button>
+  </div>
+</div>
+
+
+<!-- ===== MODAL: NUEVO PRODUCTO ===== -->
+<div class="modal" id="modal-nuevo-precio">
+  <div class="modal-box" style="max-width:520px">
+    <button class="cerrar-modal" onclick="cerrarModal('modal-nuevo-precio')">×</button>
+    <h2>Nuevo producto</h2>
+    <p class="subtitulo">Ingresá costo y márgenes para calcular los precios automáticamente</p>
+    <form id="form-nuevo-precio">
+      <div class="form-grupo">
+        <label>Marca *</label>
+        <input type="text" id="np-marca" placeholder="Ej: Royal Canin" required list="lista-marcas">
+        <datalist id="lista-marcas"></datalist>
+      </div>
+      <div class="form-grupo">
+        <label>Nombre del producto *</label>
+        <input type="text" id="np-nombre" placeholder="Ej: Adulto razas medianas" required>
+      </div>
+      <div class="form-fila">
+        <div class="form-grupo">
+          <label>Especie *</label>
+          <select id="np-especie" required>
+            <option value="">Seleccioná</option>
+            <option value="perros">🐶 Perros</option>
+            <option value="gatos">🐱 Gatos</option>
+            <option value="ambos">Ambos</option>
+          </select>
+        </div>
+        <div class="form-grupo">
+          <label>Peso / Unidad</label>
+          <input type="text" id="np-peso" placeholder="Ej: 15 kg">
+        </div>
+      </div>
+
+      <div class="form-grupo">
+        <label>Costo ($) *</label>
+        <input type="number" id="np-costo" min="0" step="1" placeholder="0" required>
+      </div>
+
+      <div class="form-fila">
+        <div class="form-grupo">
+          <label>Margen minorista (%)</label>
+          <input type="number" id="np-margen-min" min="0" step="1" value="35" placeholder="35">
+        </div>
+        <div class="form-grupo">
+          <label>Margen mayorista (%)</label>
+          <input type="number" id="np-margen-may" min="0" step="1" value="20" placeholder="20">
+        </div>
+      </div>
+
+      <!-- Preview de precios calculados -->
+      <div class="preview-precios" id="np-preview-box" style="display:none">
+        <div>Minorista: <span id="np-preview-min">$0</span></div>
+        <div>Mayorista: <span id="np-preview-may">$0</span></div>
+      </div>
+
+      <div class="form-acciones" style="margin-top:16px">
+        <button type="button" class="btn btn-outline" onclick="cerrarModal('modal-nuevo-precio')">Cancelar</button>
+        <button type="submit" class="btn btn-verde">Agregar a la lista</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ===== MODAL: ACTUALIZAR COSTOS DE MARCA ===== -->
+<div class="modal" id="modal-actualizar-marca">
+  <div class="modal-box" style="max-width:600px">
+    <button class="cerrar-modal" onclick="cerrarModal('modal-actualizar-marca')">×</button>
+    <h2>📈 Actualizar costos</h2>
+    <p class="subtitulo">
+      Marca: <strong id="upd-marca-nombre"></strong> —
+      Los precios de venta se recalculan automáticamente según los márgenes configurados
+    </p>
+
+    <div class="form-grupo">
+      <label>Aumento de costo (%)</label>
+      <input type="number" id="upd-porcentaje"
+        placeholder="Ej: 15 para aumentar 15%"
+        min="-50" max="500" step="0.5">
+    </div>
+
+    <!-- Preview de los nuevos precios antes de confirmar -->
+    <div id="upd-preview"></div>
+
+    <div class="form-acciones" style="margin-top:16px">
+      <button class="btn btn-outline" onclick="cerrarModal('modal-actualizar-marca')">Cancelar</button>
+      <button class="btn btn-verde" id="btn-confirmar-marca" onclick="confirmarActualizarMarca()">
+        ✓ Confirmar actualización
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== MODAL: CONFIRMAR ELIMINACIÓN INDIVIDUAL ===== -->
+<div class="modal" id="modal-confirmar-eliminar">
+  <div class="modal-box" style="max-width:420px">
+    <button class="cerrar-modal" onclick="cerrarModal('modal-confirmar-eliminar')">×</button>
+    <h2>⚠️ Eliminar producto</h2>
+    <p id="texto-confirmar-eliminar" style="margin:16px 0;font-size:15px;color:#444">
+      ¿Seguro que querés eliminar este producto? Esta acción no se puede deshacer.
+    </p>
+    <div class="form-acciones">
+      <button class="btn btn-outline" onclick="cerrarModal('modal-confirmar-eliminar')">Cancelar</button>
+      <button class="btn btn-rojo" id="btn-confirmar-eliminar" onclick="ejecutarEliminar()">🗑 Eliminar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== MODAL: IMPORTAR DESDE PDF ===== -->
+<div class="modal" id="modal-importar-pdf">
+  <div class="modal-box" style="max-width:700px;max-height:90vh;overflow-y:auto">
+    <button class="cerrar-modal" onclick="cerrarModal('modal-importar-pdf')">×</button>
+    <h2>📄 Importar lista desde PDF</h2>
+    <p class="subtitulo">El sistema lee el PDF, detecta las columnas y te muestra una previsualización antes de importar</p>
+
+    <!-- PASO 1: Subir archivo -->
+    <div class="form-grupo">
+      <label>Seleccioná el archivo PDF *</label>
+      <input type="file" id="pdf-archivo" accept=".pdf" style="padding:8px;border:1px solid var(--borde);border-radius:var(--radio);font-size:14px;width:100%">
+    </div>
+    <div style="margin-bottom:12px">
+      <button class="btn btn-azul" id="btn-procesar-pdf" onclick="procesarArchivoPDF()">
+        🔍 Leer PDF
+      </button>
+    </div>
+    <p id="pdf-estado" style="font-size:13px;min-height:20px"></p>
+
+    <!-- PASO 2: Config columnas + preview (se muestra luego de procesar) -->
+    <div id="pdf-paso-config" style="display:none"></div>
+  </div>
+</div>
+
+
+<!-- ===== SCRIPTS ===== -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js?v=7"></script>
+<script src="js/utils.js?v=7"></script>
+<script src="js/lista-precios.js?v=7"></script>
+<script src="js/importar-pdf.js?v=7"></script>
+<script src="js/nav-mobile.js?v=7"></script>
+
+<script>
+  // ---- Filtro rápido de especie (botones) ----
+  function filtrarEspecie(val) {
+    // Actualizar select oculto para que filtrarPrecios() lo lea
+    document.getElementById('filtro-especie-p').value = val;
+
+    // Estilos de botones
+    document.getElementById('btn-todos').className   = 'btn-especie' + (val === '' ? ' activo-todos' : '');
+    document.getElementById('btn-perros').className  = 'btn-especie' + (val === 'perros' ? ' activo-perros' : '');
+    document.getElementById('btn-gatos').className   = 'btn-especie' + (val === 'gatos'  ? ' activo-gatos'  : '');
+
+    filtrarPrecios();
+  }
+
+  // Mostrar preview cuando hay datos en el modal de nuevo precio
+  ['np-costo','np-margen-min','np-margen-may'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+      const box = document.getElementById('np-preview-box');
+      box.style.display = document.getElementById('np-costo').value ? 'flex' : 'none';
+    });
+  });
+
+  // Botón limpiar búsqueda (X)
+  function limpiarBusqueda() {
+    const input = document.getElementById('buscador-p');
+    input.value = '';
+    document.getElementById('btn-limpiar-busqueda').style.display = 'none';
+    document.getElementById('leyenda-margenes').style.display = 'flex';
+    filtrarPrecios();
+    input.focus();
+  }
+
+  // Mostrar/ocultar X según haya texto
+  document.getElementById('buscador-p').addEventListener('input', function() {
+    const tieneTexto = this.value.length > 0;
+    document.getElementById('btn-limpiar-busqueda').style.display = tieneTexto ? 'block' : 'none';
+    document.getElementById('leyenda-margenes').style.display = tieneTexto ? 'none' : 'flex';
+  });
+
+  // Autocompletar marcas ya existentes en la lista
+  async function cargarMarcasSugeridas() {
+    const dl = document.getElementById('lista-marcas');
+    const snap = await db.collection('precios').get();
+    const marcas = [...new Set(snap.docs.map(d => d.data().marca))].sort();
+    dl.innerHTML = marcas.map(m => `<option value="${m}">`).join('');
+  }
+  document.addEventListener('DOMContentLoaded', cargarMa
