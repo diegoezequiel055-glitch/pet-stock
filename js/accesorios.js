@@ -577,4 +577,50 @@ async function guardarEdicionAcc(e) {
       await db.collection('accesorios').doc(accSeleccionadoId).update({
         nombre:      document.getElementById('edit-nombre').value.trim(),
         marca:       document.getElementById('edit-marca').value.trim(),
-  
+          categoria:   document.getElementById('edit-categoria').value,
+        costo:       parseFloat(document.getElementById('edit-costo').value) || 0,
+        precioVenta: parseFloat(document.getElementById('edit-precio').value) || 0
+      });
+    }
+
+    mostrarAlerta('Producto actualizado', 'success');
+    cerrarModal('modal-editar-acc');
+    cargarAccesorios();
+  } catch (err) {
+    console.error(err);
+    mostrarAlerta('Error al actualizar', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// =============================================
+// BÚSQUEDA / FILTRO
+// =============================================
+function filtrarAccesorios() {
+  const texto     = normalizar(document.getElementById('buscador-acc').value);
+  const categoria = document.getElementById('filtro-categoria').value;
+
+  const filtrados = accesoriosCache.filter(a => {
+    const coincideTexto = !texto || normalizar(a.nombre + ' ' + (a.marca || '')).includes(texto);
+    const coincideCat   = !categoria || a.categoria === categoria;
+    return coincideTexto && coincideCat;
+  });
+
+  renderTablaAccesorios(filtrados);
+}
+
+// =============================================
+// INIT
+// =============================================
+document.addEventListener('DOMContentLoaded', () => {
+  cargarAccesorios();
+
+  document.getElementById('form-acc-nuevo')?.addEventListener('submit', agregarAccesorio);
+  document.getElementById('form-sumar-stock')?.addEventListener('submit', sumarStock);
+  document.getElementById('form-venta-acc')?.addEventListener('submit', registrarVentaAccesorio);
+  document.getElementById('form-editar-acc')?.addEventListener('submit', guardarEdicionAcc);
+
+  document.getElementById('buscador-acc')?.addEventListener('input', filtrarAccesorios);
+  document.getElementById('filtro-categoria')?.addEventListener('change', filtrarAccesorios);
+});
