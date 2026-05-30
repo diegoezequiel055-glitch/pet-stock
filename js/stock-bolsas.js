@@ -40,30 +40,29 @@ function renderTablaProductos(lista) {
   }
 
   contenedor.innerHTML = lista.map(p => {
-    const stock = p.stockTotal ?? 0;
+    const stock = p.stockTotal != null ? p.stockTotal : 0;
     const stockClase = stock <= 5 ? 'stock-bajo' : stock <= 15 ? 'stock-medio' : 'stock-ok';
     const pesoTag    = p.unidadPeso ? '<span class="badge">' + p.unidadPeso + '</span>' : '';
     const especieTag = p.especie    ? '<span class="badge">' + p.especie    + '</span>' : '';
-    return \`
-      <div class="card-bolsa">
-        <div class="card-top">
-          <div class="card-info">
-            <div class="card-titulo">\${p.marca} &mdash; \${p.nombre}</div>
-            <div class="card-badges">
-              \${pesoTag}\${especieTag}
-              <span class="badge">Costo: \${formatPrecio(p.ultimoCosto || 0)}</span>
-            </div>
-          </div>
-          <div class="card-stock-box">
-            <div class="card-stock-num \${stockClase}">\${stock}</div>
-            <div class="card-stock-lbl">stock</div>
-          </div>
-        </div>
-        <div class="card-btns">
-          <button class="btn btn-sm btn-verde" onclick="abrirModalLote('\${p.id}')">+ Lote</button>
-          <button class="btn btn-sm btn-gris"  onclick="verLotes('\${p.id}')">Ver lotes</button>
-        </div>
-      </div>\`;
+    return '<div class="card-bolsa">'
+      + '<div class="card-top">'
+        + '<div class="card-info">'
+          + '<div class="card-titulo">' + p.marca + ' — ' + p.nombre + '</div>'
+          + '<div class="card-badges">'
+            + pesoTag + especieTag
+            + '<span class="badge">Costo: ' + formatPrecio(p.ultimoCosto || 0) + '</span>'
+          + '</div>'
+        + '</div>'
+        + '<div class="card-stock-box">'
+          + '<div class="card-stock-num ' + stockClase + '">' + stock + '</div>'
+          + '<div class="card-stock-lbl">stock</div>'
+        + '</div>'
+      + '</div>'
+      + '<div class="card-btns">'
+        + '<button class="btn btn-sm btn-verde" onclick="abrirModalLote(\'' + p.id + '\')">+ Lote</button>'
+        + '<button class="btn btn-sm btn-gris"  onclick="verLotes(\'' + p.id + '\')">Ver lotes</button>'
+      + '</div>'
+    + '</div>';
   }).join('');
 }
 
