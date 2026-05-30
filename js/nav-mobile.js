@@ -1,6 +1,6 @@
 // =============================================
 // nav-mobile.js
-// - Nav inferior fija al fondo (mobile)
+// - Tab Bar inferior fija (mobile)
 // - Toggle dark/light mode
 // =============================================
 (function () {
@@ -16,42 +16,31 @@
     { href: 'ventas.html',        icon: '📋', label: 'Historial' }
   ];
 
-  // Crear nav inferior
+  // Crear tab bar inferior
   var nav = document.createElement('nav');
   nav.className = 'nav-bottom';
   nav.innerHTML = items.map(function(item) {
-    var activo = pagina === item.href ? 'activo' : '';
-    return '<a href="' + item.href + '" class="nav-item ' + activo + '">' +
+    var activo = pagina === item.href ? ' activo' : '';
+    return '<a href="' + item.href + '" class="nav-item' + activo + '">' +
       '<span class="nav-icon">' + item.icon + '</span>' +
       '<span>' + item.label + '</span>' +
       '</a>';
   }).join('');
   document.body.appendChild(nav);
 
-  // Aplicar layout segun tamano de pantalla
+  // Configurar layout segun pantalla
   function configurarNav() {
     var esMobile = window.innerWidth <= 768 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     var topNav   = document.querySelector('body > nav:not(.nav-bottom)');
-    var oscuro   = document.body.classList.contains('dark');
 
     if (esMobile) {
       if (topNav) topNav.style.display = 'none';
-      var bgColor = oscuro ? '#1e293b' : '#2e7d32';
-      nav.setAttribute('style',
-        'display:flex !important;' +
-        'position:fixed !important;' +
-        'bottom:0 !important;' +
-        'left:0 !important;' +
-        'right:0 !important;' +
-        'z-index:9999 !important;' +
-        'height:62px !important;' +
-        'background:' + bgColor + ' !important;' +
-        'box-shadow:0 -2px 10px rgba(0,0,0,.25) !important;'
-      );
-      document.body.style.paddingBottom = '70px';
+      // El CSS ya maneja el estilo; solo forzamos display
+      nav.style.removeProperty('display');
+      document.body.style.paddingBottom = '72px';
     } else {
       if (topNav) topNav.style.display = '';
-      nav.setAttribute('style', 'display:none !important;');
+      nav.style.display = 'none';
       document.body.style.paddingBottom = '';
     }
   }
@@ -66,7 +55,6 @@
     document.body.classList.toggle('dark', oscuro);
     var btnTema = document.getElementById('btn-toggle-tema');
     if (btnTema) btnTema.textContent = oscuro ? 'Sol' : 'Luna';
-    configurarNav();
   }
 
   var guardado = localStorage.getItem(CLAVE);
