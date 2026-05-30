@@ -33,52 +33,51 @@ async function cargarProductos() {
 function togglePanel(header) {
   var panel = header.nextElementSibling;
   var arrow = header.querySelector('.tw-arrow');
-  panel.classList.toggle('hidden');
-  if (arrow) arrow.style.transform = panel.classList.contains('hidden') ? '' : 'rotate(180deg)';
+  var cerrado = panel.style.display === 'none' || panel.style.display === '';
+  panel.style.display = cerrado ? 'block' : 'none';
+  if (arrow) arrow.style.transform = cerrado ? 'rotate(180deg)' : '';
 }
 
 function renderTablaProductos(lista) {
   var contenedor = document.getElementById('tbody-productos');
   if (!contenedor) return;
   if (lista.length === 0) {
-    contenedor.innerHTML = '<p class="text-center text-gray-400 py-8">No hay productos cargados</p>';
+    contenedor.innerHTML = '<p style="text-align:center;color:#94a3b8;padding:24px">No hay productos cargados</p>';
     return;
   }
   contenedor.innerHTML = lista.map(function(p) {
     var stock = p.stockTotal != null ? p.stockTotal : 0;
-    var stockColor = stock <= 5 ? 'text-red-500' : stock <= 15 ? 'text-orange-500' : 'text-emerald-400';
+    var stockColor = stock <= 5 ? '#ef4444' : stock <= 15 ? '#f97316' : '#4ade80';
     var espBadge = p.especie
-      ? '<span class="bg-gray-700 text-gray-300 px-2 py-0.5 rounded">' + p.especie + '</span>'
+      ? '<span style="background:#374151;color:#d1d5db;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">' + p.especie + '</span>'
       : '';
     var pesoBadge = p.unidadPeso
-      ? '<span class="bg-slate-900 text-emerald-400 px-2 py-0.5 rounded font-medium">' + p.unidadPeso + '</span>'
+      ? '<span style="background:#0f172a;color:#4ade80;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600">' + p.unidadPeso + '</span>'
       : '';
-    var costoStr = formatPrecio(p.ultimoCosto || 0);
-    return '<div class="mb-2 rounded-lg overflow-hidden">'
-      + '<div class="flex items-center justify-between p-3 bg-[#1e293b] border border-gray-800 rounded-lg cursor-pointer hover:bg-slate-800 transition-colors" onclick="togglePanel(this)">'
-        + '<div class="flex flex-col space-y-1">'
-          + '<div class="flex items-center space-x-2 flex-wrap">'
-            + '<span class="text-white font-bold text-sm">' + p.marca + '</span>'
-            + '<span class="text-gray-300 text-sm">&mdash; ' + p.nombre + '</span>'
+    return '<div style="margin-bottom:8px;border-radius:10px;overflow:hidden">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#1e293b;border:1px solid #1e3a5f;border-radius:10px;cursor:pointer" onclick="togglePanel(this)">'
+        + '<div style="flex:1;min-width:0">'
+          + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px">'
+            + '<span style="color:#fff;font-weight:700;font-size:14px">' + p.marca + '</span>'
+            + '<span style="color:#94a3b8;font-size:14px">&mdash; ' + p.nombre + '</span>'
           + '</div>'
-          + '<div class="flex items-center space-x-2 text-xs flex-wrap">'
-            + espBadge
-            + pesoBadge
-            + '<span class="text-gray-400 font-semibold ml-2">Costo: ' + costoStr + '</span>'
+          + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
+            + espBadge + pesoBadge
+            + '<span style="color:#94a3b8;font-size:11px;font-weight:600">Costo: ' + formatPrecio(p.ultimoCosto || 0) + '</span>'
           + '</div>'
         + '</div>'
-        + '<div class="flex items-center space-x-3 pr-1">'
-          + '<div class="flex flex-col items-center justify-center bg-slate-900 border border-gray-700 px-3 py-1 rounded-md min-w-[50px]">'
-            + '<span class="text-gray-400 uppercase tracking-wider font-bold" style="font-size:9px">Stock</span>'
-            + '<span class="text-base font-black ' + stockColor + '">' + stock + '</span>'
+        + '<div style="display:flex;align-items:center;gap:10px;flex-shrink:0">'
+          + '<div style="display:flex;flex-direction:column;align-items:center;background:#0f172a;border:1px solid #334155;padding:4px 10px;border-radius:8px;min-width:46px">'
+            + '<span style="font-size:9px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Stock</span>'
+            + '<span style="font-size:18px;font-weight:900;color:' + stockColor + ';line-height:1.2">' + stock + '</span>'
           + '</div>'
-          + '<span class="text-gray-500 text-xs tw-arrow transition-transform duration-200">&#9660;</span>'
+          + '<span class="tw-arrow" style="font-size:12px;color:#64748b;transition:transform .2s">&#9660;</span>'
         + '</div>'
       + '</div>'
-      + '<div class="hidden bg-[#131c2e] p-3 border-x border-b border-gray-800 rounded-b-lg">'
-        + '<div class="flex gap-2">'
-          + '<button class="btn btn-sm btn-verde flex-1" onclick="abrirModalLote(\'' + p.id + '\')">+ Lote</button>'
-          + '<button class="btn btn-sm btn-gris flex-1" onclick="verLotes(\'' + p.id + '\')">Ver lotes</button>'
+      + '<div style="display:none;background:#131c2e;padding:12px 14px;border:1px solid #1e3a5f;border-top:none;border-radius:0 0 10px 10px">'
+        + '<div style="display:flex;gap:8px">'
+          + '<button class="btn btn-sm btn-verde" style="flex:1;justify-content:center" onclick="abrirModalLote(\'' + p.id + '\')">+ Lote</button>'
+          + '<button class="btn btn-sm btn-gris"  style="flex:1;justify-content:center" onclick="verLotes(\'' + p.id + '\')">Ver lotes</button>'
         + '</div>'
       + '</div>'
     + '</div>';
