@@ -156,6 +156,7 @@ function renderTablaAccesorios(lista) {
         + '<div style="display:flex;gap:6px">'
           + '<button class="btn btn-sm btn-verde" style="flex:1;justify-content:center" onclick="abrirModalSumarStockVariante(\'' + p.id + '\',\'' + v.id + '\')">+ Stock</button>'
           + '<button class="btn btn-sm btn-gris"  style="flex:1;justify-content:center" onclick="abrirModalEditarVariante(\'' + p.id + '\',\'' + v.id + '\')">Editar</button>'
+          + '<button class="btn btn-sm btn-rojo"  style="justify-content:center;padding:5px 10px" onclick="eliminarVariante(\'' + p.id + '\',\'' + v.id + '\')" title="Eliminar variante">🗑️</button>'
         + '</div>'
       + '</div>';
     }).join('');
@@ -499,6 +500,24 @@ async function guardarEdicionAcc(e) {
     mostrarAlerta('Error al actualizar', 'error');
   } finally {
     btn.disabled = false;
+  }
+}
+
+// =============================================
+// ELIMINAR VARIANTE
+// =============================================
+async function eliminarVariante(padreId, varId) {
+  var v = accesoriosCache.find(function(a) { return a.id === varId && a._esVariante; });
+  var nombre = v ? v.nombre_variante : 'esta variante';
+  if (!confirm('¿Eliminar "' + nombre + '"? Esta acción no se puede deshacer.')) return;
+  try {
+    await db.collection('accesorios').doc(padreId)
+      .collection('variantes').doc(varId).delete();
+    mostrarAlerta('"' + nombre + '" eliminada', 'success');
+    cargarAccesorios();
+  } catch (err) {
+    console.error(err);
+    mostrarAlerta('Error al eliminar la variante', 'error');
   }
 }
 

@@ -4,8 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vender — Pet Stock</title>
-  <link rel="stylesheet" href="css/styles.css?v=7">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/styles.css?v=8">
   <style>
     /* Overrides para convivir con styles.css */
     body { background: #f1f5f9; }
@@ -95,22 +94,20 @@
       font-size: 14px;
     }
 
-    /* Barra total fija abajo */
-    #barra-confirmar {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      background: white;
-      border-top: 1px solid #e2e8f0;
-      padding: 12px 16px;
+    /* Footer de carrito (dentro del bloque, no fijo) */
+    #cart-footer {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      z-index: 100;
-      box-shadow: 0 -4px 16px rgba(0,0,0,.08);
+      background: #f8fafc;
+      border-top: 1.5px solid #e2e8f0;
+      border-radius: 0 0 12px 12px;
+      padding: 14px 16px;
+      margin-top: 4px;
     }
-    #barra-confirmar .total-label { font-size: 13px; color: #64748b; }
-    #barra-confirmar .total-valor { font-size: 22px; font-weight: 800; color: #16a34a; }
+    #cart-footer .total-label { font-size: 13px; color: #64748b; }
+    #cart-footer .total-valor { font-size: 22px; font-weight: 800; color: #16a34a; }
     #btn-confirmar {
       background: #16a34a;
       color: white;
@@ -122,6 +119,7 @@
       cursor: pointer;
       flex-shrink: 0;
       transition: background .15s;
+      min-height: 48px;
     }
     #btn-confirmar:hover  { background: #15803d; }
     #btn-confirmar:active { background: #166534; }
@@ -173,7 +171,7 @@
   <a href="ventas.html">📋 Historial</a>
 </nav>
 
-<div class="container pb-barra">
+<div class="container">
 
   <!-- BUSCADOR -->
   <div class="page-header" style="margin-bottom:16px">
@@ -202,15 +200,22 @@
   </div>
 
   <!-- CARRITO -->
-  <div style="margin-bottom: 16px;">
-    <div style="font-size:13px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px;">
-      Carrito <span id="carrito-count" style="color:#16a34a"></span>
+  <div style="background:white; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,.07); margin-bottom:16px; overflow:hidden;">
+    <div style="padding:12px 16px 8px; font-size:13px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid #f1f5f9;">
+      🛒 Carrito <span id="carrito-count" style="color:#16a34a"></span>
     </div>
 
-    <div id="carrito-lista">
-      <div id="carrito-vacio">
-        🛒 Buscá un producto para agregarlo al carrito
+    <div id="carrito-lista" style="padding:10px 12px 0;"></div>
+
+    <!-- Footer del carrito: total + botón confirmar -->
+    <div id="cart-footer">
+      <div>
+        <div class="total-label">Total carrito</div>
+        <div class="total-valor" id="total-carrito">$0</div>
       </div>
+      <button id="btn-confirmar" disabled onclick="confirmarVenta()">
+        ✓ Confirmar venta
+      </button>
     </div>
   </div>
 
@@ -259,27 +264,16 @@
 
 </div>
 
-<!-- BARRA FIJA CONFIRMAR VENTA -->
-<div id="barra-confirmar">
-  <div>
-    <div class="total-label">Total carrito</div>
-    <div class="total-valor" id="total-carrito">$0</div>
-  </div>
-  <button id="btn-confirmar" disabled onclick="confirmarVenta()">
-    ✓ Confirmar venta
-  </button>
-</div>
-
 <!-- TOAST -->
 <div id="toast"></div>
 
 <!-- SCRIPTS FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-<script src="js/firebase-config.js?v=7"></script>
-<script src="js/utils.js?v=7"></script>
-<script src="js/vender.js?v=7"></script>
-<script src="js/nav-mobile.js?v=7"></script>
+<script src="js/firebase-config.js?v=8"></script>
+<script src="js/utils.js?v=8"></script>
+<script src="js/vender.js?v=8"></script>
+<script src="js/nav-mobile.js?v=8"></script>
 
 </body>
 </html>

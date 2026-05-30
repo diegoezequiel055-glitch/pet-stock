@@ -323,18 +323,23 @@ async function verLotes(productoId) {
 
     const tbody = document.getElementById('tbody-lotes');
     if (snap.empty) {
-      tbody.innerHTML = '<tr><td colspan="5" class="sin-datos">Sin lotes cargados</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="sin-datos">Sin lotes cargados</td></tr>';
     } else {
       tbody.innerHTML = snap.docs.map(doc => {
         const l = doc.data();
         const agotado = l.cantidadRestante === 0;
         return `
           <tr class="${agotado ? 'lote-agotado' : ''}">
-            <td>${formatFecha(l.fechaCompra)}</td>
-            <td>${l.cantidadRestante} / ${l.cantidadInicial}</td>
-            <td>${formatPrecio(l.costoUnitario)}</td>
-            <td>${formatPrecio(l.costoUnitario * l.cantidadRestante)}</td>
-            <td>${l.proveedor}</td>
+            <td data-label="Fecha">${formatFecha(l.fechaCompra)}</td>
+            <td data-label="Stock">${l.cantidadRestante} / ${l.cantidadInicial}</td>
+            <td data-label="Costo unit.">${formatPrecio(l.costoUnitario)}</td>
+            <td data-label="Valor total">${formatPrecio(l.costoUnitario * l.cantidadRestante)}</td>
+            <td data-label="Proveedor">${l.proveedor}</td>
+            <td data-label="">
+              <button onclick="eliminarLote('${productoId}','${doc.id}',${l.cantidadRestante})"
+                style="background:none;border:none;font-size:18px;cursor:pointer;padding:2px 6px;color:#ef4444"
+                title="Eliminar lote">🗑️</button>
+            </td>
           </tr>`;
       }).join('');
     }
@@ -343,6 +348,29 @@ async function verLotes(productoId) {
   } catch (err) {
     console.error(err);
     mostrarAlerta('Error al cargar los lotes', 'error');
+  }
+}
+
+// =============================================
+// ELIMINAR LOTE
+// =============================================
+async function eliminarLote(productoId, loteId, cantidadRestante) {
+  if (!confirm('¿Eliminar este lote? Se descontarán ' + cantidadRestante + ' unidades del stock total.')) return;
+  try {
+    const productoRef = db.collection('productos').doc(productoId);
+    await db.runTransaction(async (t) => {
+      const loteRef = productoRef.collection('lotes').doc(loteId);
+      t.delete(loteRef);
+      t.update(productoRef, {
+        stockTotal: firebase.firestore.FieldValue.increment(-cantidadRestante)
+      });
+    });
+    mostrarAlerta('Lote eliminado correctamente', 'success');
+    verLotes(productoId);
+    cargarProductos();
+  } catch (err) {
+    console.error(err);
+    mostrarAlerta('Error al eliminar el lote', 'error');
   }
 }
 

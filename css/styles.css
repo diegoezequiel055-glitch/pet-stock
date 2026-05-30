@@ -688,7 +688,7 @@ body.dark .toggle-tema { background: #334155; }
     max-width: 100% !important;
     max-height: 92vh;
     overflow-y: auto;
-    padding: 20px 16px 28px;
+    padding: 20px 16px 90px;
   }
 
   /* === FORMULARIOS === */

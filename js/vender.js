@@ -243,8 +243,12 @@ function renderCarrito() {
 
   if (carrito.length === 0) {
     lista.innerHTML = `
-      <div style="text-align:center;padding:32px 0;color:#94a3b8;font-size:14px">
-        🛒 Buscá un producto para agregarlo al carrito
+      <div style="text-align:center;padding:28px 16px 20px;display:flex;flex-direction:column;align-items:center;gap:8px">
+        <div style="font-size:44px;line-height:1">🛒</div>
+        <div style="font-size:15px;font-weight:700;color:#1e293b">Carrito vacío</div>
+        <div style="font-size:13px;color:#94a3b8;max-width:240px;text-align:center">
+          Usá el buscador de arriba para agregar productos
+        </div>
       </div>`;
     count.textContent = '';
     document.getElementById('total-carrito').textContent = '$0';
