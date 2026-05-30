@@ -156,7 +156,7 @@ function renderTablaAccesorios(lista) {
         + '<div style="display:flex;gap:6px">'
           + '<button class="btn btn-sm btn-verde" style="flex:1;justify-content:center" onclick="abrirModalSumarStockVariante(\'' + p.id + '\',\'' + v.id + '\')">+ Stock</button>'
           + '<button class="btn btn-sm btn-gris"  style="flex:1;justify-content:center" onclick="abrirModalEditarVariante(\'' + p.id + '\',\'' + v.id + '\')">Editar</button>'
-          + '<button class="btn btn-sm btn-rojo"  style="justify-content:center;padding:5px 10px" onclick="eliminarVariante(\'' + p.id + '\',\'' + v.id + '\')" title="Eliminar variante">🗑️</button>'
+          + '<button class="btn-basura btn-basura-sm" onclick="eliminarVariante(\'' + p.id + '\',\'' + v.id + '\')" title="Eliminar variante">🗑️</button>'
         + '</div>'
       + '</div>';
     }).join('');
@@ -176,8 +176,9 @@ function renderTablaAccesorios(lista) {
       + '</div>'
       + '<div style="' + PANEL + '">'
         + varsHtml
-        + '<div style="display:flex;gap:8px;margin-top:4px">'
+        + '<div style="display:flex;gap:8px;margin-top:4px;align-items:center">'
           + '<button class="btn btn-sm btn-gris" style="flex:1;justify-content:center" onclick="abrirModalEditarPadre(\'' + p.id + '\')">Editar grupo</button>'
+          + '<button class="btn-basura btn-basura-sm" onclick="eliminarPadreCompleto(\'' + p.id + '\',\'' + p.nombre.replace(/'/g,'') + '\')" title="Eliminar grupo completo">🗑️</button>'
         + '</div>'
       + '</div>'
     + '</div>';
@@ -212,9 +213,10 @@ function renderTablaAccesorios(lista) {
           + '<span style="' + BADGE + '">Costo: ' + formatPrecio(a.costo) + '</span>'
           + '<span style="' + BADGE + '">Venta: ' + formatPrecio(a.precioVenta) + '</span>'
         + '</div>'
-        + '<div style="display:flex;gap:8px">'
+        + '<div style="display:flex;gap:8px;align-items:center">'
           + '<button class="btn btn-sm btn-verde" style="flex:1;justify-content:center" onclick="abrirModalSumarStock(\'' + a.id + '\')">+ Stock</button>'
           + '<button class="btn btn-sm btn-gris"  style="flex:1;justify-content:center" onclick="abrirModalEditarAcc(\'' + a.id + '\')">Editar</button>'
+          + '<button class="btn-basura btn-basura-sm" onclick="eliminarAccesorio(\'' + a.id + '\',\'' + a.nombre.replace(/'/g,'') + '\')" title="Eliminar producto">🗑️</button>'
         + '</div>'
       + '</div>'
     + '</div>';
@@ -504,6 +506,40 @@ async function guardarEdicionAcc(e) {
 }
 
 // =============================================
+// ELIMINAR ACCESORIO SIMPLE
+// =============================================
+async function eliminarAccesorio(id, nombre) {
+  if (!confirm('¿Estás seguro de eliminar "' + nombre + '"?\nEsta acción no se puede deshacer.')) return;
+  try {
+    await db.collection('accesorios').doc(id).delete();
+    mostrarAlerta('"' + nombre + '" eliminado', 'success');
+    cargarAccesorios();
+  } catch (err) {
+    console.error(err);
+    mostrarAlerta('Error al eliminar', 'error');
+  }
+}
+
+// =============================================
+// ELIMINAR PADRE COMPLETO (GRUPO + TODAS SUS VARIANTES)
+// =============================================
+async function eliminarPadreCompleto(padreId, nombre) {
+  if (!confirm('¿Estás seguro de eliminar el grupo "' + nombre + '" y todas sus variantes?\nEsta acción no se puede deshacer.')) return;
+  try {
+    const varSnap = await db.collection('accesorios').doc(padreId).collection('variantes').get();
+    var batch = db.batch();
+    varSnap.docs.forEach(function(d) { batch.delete(d.ref); });
+    batch.delete(db.collection('accesorios').doc(padreId));
+    await batch.commit();
+    mostrarAlerta('Grupo "' + nombre + '" eliminado', 'success');
+    cargarAccesorios();
+  } catch (err) {
+    console.error(err);
+    mostrarAlerta('Error al eliminar el grupo', 'error');
+  }
+}
+
+// =============================================
 // ELIMINAR VARIANTE
 // =============================================
 async function eliminarVariante(padreId, varId) {
@@ -511,49 +547,4 @@ async function eliminarVariante(padreId, varId) {
   var nombre = v ? v.nombre_variante : 'esta variante';
   if (!confirm('¿Eliminar "' + nombre + '"? Esta acción no se puede deshacer.')) return;
   try {
-    await db.collection('accesorios').doc(padreId)
-      .collection('variantes').doc(varId).delete();
-    mostrarAlerta('"' + nombre + '" eliminada', 'success');
-    cargarAccesorios();
-  } catch (err) {
-    console.error(err);
-    mostrarAlerta('Error al eliminar la variante', 'error');
-  }
-}
-
-// =============================================
-// BÚSQUEDA / FILTRO
-// =============================================
-function filtrarAccesorios() {
-  var texto     = normalizar(document.getElementById('buscador-acc').value);
-  var categoria = document.getElementById('filtro-categoria').value;
-
-  var filtrados = accesoriosCache.filter(function(a) {
-    var coincideTexto = !texto || normalizar(a.nombre + ' ' + (a.marca || '')).includes(texto);
-    var coincideCat   = !categoria || a.categoria === categoria;
-    return coincideTexto && coincideCat;
-  });
-
-  renderTablaAccesorios(filtrados);
-}
-
-// =============================================
-// INIT
-// =============================================
-document.addEventListener('DOMContentLoaded', function() {
-  cargarAccesorios();
-
-  var formNuevo  = document.getElementById('form-acc-nuevo');
-  var formStock  = document.getElementById('form-sumar-stock');
-  var formEditar = document.getElementById('form-editar-acc');
-
-  if (formNuevo)  formNuevo.addEventListener('submit',  agregarAccesorio);
-  if (formStock)  formStock.addEventListener('submit',  sumarStock);
-  if (formEditar) formEditar.addEventListener('submit', guardarEdicionAcc);
-
-  var buscador  = document.getElementById('buscador-acc');
-  var filtroCat = document.getElementById('filtro-categoria');
-
-  if (buscador)  buscador.addEventListener('input',   filtrarAccesorios);
-  if (filtroCat) filtroCat.addEventListener('change', filtrarAccesorios);
-});
+    await db.collection('accesorios').doc(p

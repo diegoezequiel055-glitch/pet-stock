@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ventas — Pet Stock</title>
-  <link rel="stylesheet" href="css/styles.css?v=7">
+  <link rel="stylesheet" href="css/styles.css?v=9">
   <style>
     /* ---- Tarjetas resumen ---- */
     .tarjetas-resumen {
@@ -172,10 +172,11 @@
           <th>Total</th>
           <th>Costo</th>
           <th>Ganancia</th>
+          <th></th>
         </tr>
       </thead>
       <tbody id="tbody-ventas">
-        <tr><td colspan="8" class="sin-datos">Cargando...</td></tr>
+        <tr><td colspan="9" class="sin-datos">Cargando...</td></tr>
       </tbody>
     </table>
   </div>
@@ -185,10 +186,10 @@
 <!-- ===== SCRIPTS ===== -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-<script src="js/firebase-config.js?v=7"></script>
-<script src="js/utils.js?v=7"></script>
-<script src="js/ventas.js?v=7"></script>
-<script src="js/nav-mobile.js?v=7"></script>
+<script src="js/firebase-config.js?v=9"></script>
+<script src="js/utils.js?v=9"></script>
+<script src="js/ventas.js?v=9"></script>
+<script src="js/nav-mobile.js?v=9"></script>
 
 <script>
   // Marcar botón de filtro rápido activo
@@ -206,7 +207,4 @@
     const el = document.getElementById('contador-ventas');
     if (el) el.textContent = lista.length > 0 ? `${lista.length} venta${lista.length !== 1 ? 's' : ''}` : '';
   };
-</script>
-
-</body>
-</html>
+</scrip

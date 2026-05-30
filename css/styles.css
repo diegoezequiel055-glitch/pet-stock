@@ -792,6 +792,36 @@ body.dark .card-acc { background: #1e293b; }
 body.dark .badge    { background: #0f172a; color: #94a3b8; }
 body.dark .card-variante { border-left-color: #475569; }
 
+/* =============================================
+   BOTÓN BASURA — estilo unificado para toda la app
+   ============================================= */
+.btn-basura {
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  transition: background .15s, transform .1s;
+}
+.btn-basura:hover  { background: #b91c1c; }
+.btn-basura:active { transform: scale(.94); background: #991b1b; }
+/* Versión pequeña para listas de lotes / historial */
+.btn-basura-sm {
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+  border-radius: 6px;
+}
+
 /* Desktop: grid de 2 columnas */
 @media (min-width: 769px) {
   .lista-cards {
@@ -914,25 +944,4 @@ body.dark .acord-content { border-top-color: #334155; }
   margin-bottom: 8px;
   border: 1px solid #e2e8f0;
 }
-body.dark .acord-variante { background: #162032; border-color: #334155; }
-.acord-variante-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-.acord-variante-nombre { font-weight: 700; font-size: 13px; }
-.acord-variante-stock  { font-size: 20px; font-weight: 800; }
-.acord-variante-meta   { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
-.acord-variante-btns   { display: flex; gap: 6px; }
-.acord-variante-btns .btn { flex: 1; justify-content: center; min-height: 34px; font-size: 12px; }
-/* Padre sin stock: etiqueta */
-.acord-padre-label {
-  font-size: 11px;
-  color: var(--azul);
-  font-weight: 700;
-  background: #e3f2fd;
-  padding: 1px 7px;
-  border-radius: 5px;
-}
-body.dark .acord-padre-label { background: #1a2f4a; }
+body.dark .acord-variante { background: #1620

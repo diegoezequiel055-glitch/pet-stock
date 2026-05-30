@@ -26,18 +26,28 @@ async function cargarVentas() {
 
     ventasCache = snap.docs.map(doc => {
       const d = doc.data();
+      // Soporte para ventas multi-item (formato nuevo de vender.js)
+      const esMulti = d.origen === 'vender' && Array.isArray(d.items) && d.items.length > 0;
       return {
-        id:       doc.id,
-        tipo:     d.tipo || 'bolsa',
-        nombre:   d.nombreProducto || '-',
-        cantidad: d.cantidad || 0,
-        precio:   d.precioVenta || 0,
-        total:    d.totalVenta || 0,
-        costo:    d.costoFIFO  || d.costo || 0,
-        ganancia: d.ganancia   || 0,
-        cliente:  d.cliente    || '-',
-        audio:    d.origenAudio || false,
-        fecha:    d.fecha       // Timestamp Firestore
+        id:          doc.id,
+        tipo:        esMulti ? 'multi' : (d.tipo || 'bolsa'),
+        nombre:      esMulti
+                       ? d.items.map(i => i.nombre).join(' · ')
+                       : (d.nombreProducto || '-'),
+        cantidad:    esMulti
+                       ? d.items.reduce((s, i) => s + (i.cantidad || 0), 0)
+                       : (d.cantidad || 0),
+        precio:      d.precioVenta || 0,
+        total:       d.totalVenta  || 0,
+        costo:       d.costoFIFO   || d.costoTotal || d.costo || 0,
+        ganancia:    d.ganancia    || 0,
+        cliente:     d.cliente     || '-',
+        audio:       d.origenAudio || false,
+        fecha:       d.fecha,
+        // Datos para restitución de stock al borrar
+        _productoId: d.productoId  || null,
+        _items:      d.items       || null,
+        _origen:     d.origen      || 'legacy'
       };
     });
 
@@ -94,7 +104,7 @@ function renderTablaVentas(lista) {
   if (!tbody) return;
 
   if (lista.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" class="sin-datos">No hay ventas en el período seleccionado</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="sin-datos">No hay ventas en el período seleccionado</td></tr>';
     return;
   }
 
@@ -105,13 +115,15 @@ function renderTablaVentas(lista) {
     const gananciaClase = v.ganancia >= 0 ? 'ganancia-pos' : 'ganancia-neg';
     const tipoTag = v.tipo === 'bolsa'
       ? '<span class="tag tag-bolsa">📦 Bolsa</span>'
-      : '<span class="tag tag-acc">🧸 Accesorio</span>';
+      : v.tipo === 'multi'
+        ? '<span class="tag" style="background:#fef3c7;color:#92400e">🛒 Multi</span>'
+        : '<span class="tag tag-acc">🧸 Accesorio</span>';
     const audioTag = v.audio ? ' <span title="Registrado por voz">🎙️</span>' : '';
 
     return `<tr>
       <td data-label="Fecha">${formatFecha(v.fecha)}</td>
       <td data-label="Tipo">${tipoTag}</td>
-      <td data-label="Producto">${v.nombre}${audioTag}</td>
+      <td data-label="Producto" style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${v.nombre}${audioTag}</td>
       <td data-label="Cantidad" style="text-align:right">${v.cantidad}</td>
       <td data-label="Precio unit.">${formatPrecio(v.precio)}</td>
       <td data-label="Total"><strong>${formatPrecio(v.total)}</strong></td>
@@ -119,6 +131,9 @@ function renderTablaVentas(lista) {
       <td data-label="Ganancia" class="${gananciaClase}">
         <strong>${formatPrecio(v.ganancia)}</strong>
         <small>(${margenPct}%)</small>
+      </td>
+      <td data-label="">
+        <button class="btn-basura btn-basura-sm" onclick="eliminarVenta('${v.id}')" title="Eliminar venta y restituir stock">🗑️</button>
       </td>
     </tr>`;
   }).join('');
@@ -212,29 +227,4 @@ function exportarCSV() {
     v.costo,
     v.ganancia,
     `"${v.cliente}"`
-  ].join(','));
-
-  const csv = [encabezado.join(','), ...filas].join('\n');
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = `ventas_${hoyISO()}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-  mostrarAlerta('Exportación lista', 'success');
-}
-
-// =============================================
-// INIT
-// =============================================
-document.addEventListener('DOMContentLoaded', () => {
-  // Filtro por defecto: mes actual
-  filtroRapido('mes');
-  cargarVentas();
-
-  document.getElementById('buscador-v')?.addEventListener('input', aplicarFiltros);
-  document.getElementById('filtro-tipo')?.addEventListener('change', aplicarFiltros);
-  document.getElementById('filtro-desde')?.addEventListener('change', aplicarFiltros);
-  document.getElementById('filtro-hasta')?.addEventListener('change', aplicarFiltros);
-});
+  ].join(',

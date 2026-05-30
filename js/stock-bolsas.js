@@ -75,9 +75,10 @@ function renderTablaProductos(lista) {
         + '</div>'
       + '</div>'
       + '<div style="display:none;background:#131c2e;padding:12px 14px;border:1px solid #1e3a5f;border-top:none;border-radius:0 0 10px 10px">'
-        + '<div style="display:flex;gap:8px">'
+        + '<div style="display:flex;gap:8px;align-items:center">'
           + '<button class="btn btn-sm btn-verde" style="flex:1;justify-content:center" onclick="abrirModalLote(\'' + p.id + '\')">+ Lote</button>'
           + '<button class="btn btn-sm btn-gris"  style="flex:1;justify-content:center" onclick="verLotes(\'' + p.id + '\')">Ver lotes</button>'
+          + '<button class="btn-basura btn-basura-sm" onclick="eliminarProducto(\'' + p.id + '\',\'' + (p.marca + ' ' + p.nombre).replace(/'/g, '') + '\')" title="Eliminar producto completo">🗑️</button>'
         + '</div>'
       + '</div>'
     + '</div>';
@@ -336,9 +337,7 @@ async function verLotes(productoId) {
             <td data-label="Valor total">${formatPrecio(l.costoUnitario * l.cantidadRestante)}</td>
             <td data-label="Proveedor">${l.proveedor}</td>
             <td data-label="">
-              <button onclick="eliminarLote('${productoId}','${doc.id}',${l.cantidadRestante})"
-                style="background:none;border:none;font-size:18px;cursor:pointer;padding:2px 6px;color:#ef4444"
-                title="Eliminar lote">🗑️</button>
+              <button class="btn-basura btn-basura-sm" onclick="eliminarLote('${productoId}','${doc.id}',${l.cantidadRestante})" title="Eliminar lote">🗑️</button>
             </td>
           </tr>`;
       }).join('');
@@ -375,33 +374,28 @@ async function eliminarLote(productoId, loteId, cantidadRestante) {
 }
 
 // =============================================
+// ELIMINAR PRODUCTO COMPLETO (PADRE + TODOS SUS LOTES)
+// =============================================
+async function eliminarProducto(productoId, nombreProducto) {
+  if (!confirm('¿Estás seguro de eliminar "' + nombreProducto + '" y todos sus lotes?\nEsta acción no se puede deshacer.')) return;
+  try {
+    const productoRef = db.collection('productos').doc(productoId);
+    const lotesSnap = await productoRef.collection('lotes').get();
+    const batch = db.batch();
+    lotesSnap.docs.forEach(function(d) { batch.delete(d.ref); });
+    batch.delete(productoRef);
+    await batch.commit();
+    mostrarAlerta('"' + nombreProducto + '" eliminado correctamente', 'success');
+    cargarProductos();
+  } catch (err) {
+    console.error(err);
+    mostrarAlerta('Error al eliminar el producto', 'error');
+  }
+}
+
+// =============================================
 // BÚSQUEDA / FILTRO
 // =============================================
 function filtrarProductos() {
   const texto    = normalizar(document.getElementById('buscador').value);
-  const especie  = document.getElementById('filtro-especie').value;
-
-  const filtrados = productosCache.filter(p => {
-    const coincideTexto   = !texto || normalizar(p.nombre + ' ' + p.marca).includes(texto);
-    const coincideEspecie = !especie || p.especie === especie;
-    return coincideTexto && coincideEspecie;
-  });
-
-  renderTablaProductos(filtrados);
-}
-
-// =============================================
-// INIT
-// =============================================
-document.addEventListener('DOMContentLoaded', () => {
-  cargarProductos();
-
-  // Formularios
-  document.getElementById('form-producto')?.addEventListener('submit', agregarProducto);
-  document.getElementById('form-lote')?.addEventListener('submit', agregarLote);
-  document.getElementById('form-venta')?.addEventListener('submit', registrarVenta);
-
-  // Búsqueda en tiempo real
-  document.getElementById('buscador')?.addEventListener('input', filtrarProductos);
-  document.getElementById('filtro-especie')?.addEventListener('change', filtrarProductos);
-});
+  const especie  = document.getE
