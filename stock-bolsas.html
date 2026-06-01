@@ -199,6 +199,33 @@
 </div>
 
 
+<!-- ===== MODAL: EDITAR PRODUCTO ===== -->
+<div class="modal" id="modal-editar-producto">
+  <div class="modal-box" style="overflow-y:auto;padding-bottom:90px">
+    <button class="cerrar-modal" onclick="cerrarModal('modal-editar-producto')">×</button>
+    <h2>Editar producto</h2>
+    <form id="form-editar-producto">
+      <div class="form-grupo">
+        <label>Marca *</label>
+        <input type="text" id="edit-prod-marca" placeholder="Ej: Royal Canin" required>
+      </div>
+      <div class="form-grupo">
+        <label>Nombre *</label>
+        <input type="text" id="edit-prod-nombre" placeholder="Ej: Adulto razas medianas" required>
+      </div>
+      <div class="form-grupo">
+        <label>Unidad / Peso</label>
+        <input type="text" id="edit-prod-peso" placeholder="Ej: 15 kg">
+      </div>
+      <div class="form-acciones">
+        <button type="button" class="btn btn-outline" onclick="cerrarModal('modal-editar-producto')">Cancelar</button>
+        <button type="submit" class="btn btn-verde">Guardar cambios</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
 <!-- ===== SCRIPTS ===== -->
 <!-- Firebase SDK (compatibilidad con módulos ES5 — misma versión que Mi-stock-ropa) -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>

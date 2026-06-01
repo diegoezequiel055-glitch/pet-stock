@@ -178,6 +178,7 @@ function renderTablaAccesorios(lista) {
         + varsHtml
         + '<div style="display:flex;gap:8px;margin-top:4px">'
           + '<button class="btn btn-sm btn-gris" style="flex:1;justify-content:center" onclick="abrirModalEditarPadre(\'' + p.id + '\')">Editar grupo</button>'
+          + '<button class="btn btn-sm btn-rojo" style="justify-content:center;padding:5px 10px" onclick="eliminarPadre(\'' + p.id + '\',\'' + p.nombre.replace(/'/g,"&#39;") + '\')" title="Eliminar grupo">🗑️</button>'
         + '</div>'
       + '</div>'
     + '</div>';
@@ -215,6 +216,7 @@ function renderTablaAccesorios(lista) {
         + '<div style="display:flex;gap:8px">'
           + '<button class="btn btn-sm btn-verde" style="flex:1;justify-content:center" onclick="abrirModalSumarStock(\'' + a.id + '\')">+ Stock</button>'
           + '<button class="btn btn-sm btn-gris"  style="flex:1;justify-content:center" onclick="abrirModalEditarAcc(\'' + a.id + '\')">Editar</button>'
+          + '<button class="btn btn-sm btn-rojo" style="justify-content:center;padding:5px 10px" onclick="eliminarSimple(\'' + a.id + '\',\'' + a.nombre.replace(/'/g,"&#39;") + '\')" title="Eliminar">🗑️</button>'
         + '</div>'
       + '</div>'
     + '</div>';
@@ -490,30 +492,26 @@ async function guardarEdicionAcc(e) {
         precioVenta: parseFloat(document.getElementById('edit-precio').value) || 0
       });
     }
-
-    mostrarAlerta('Producto actualizado', 'success');
+    mostrarAlerta('Cambios guardados', 'success');
     cerrarModal('modal-editar-acc');
     cargarAccesorios();
-
   } catch (err) {
     console.error(err);
-    mostrarAlerta('Error al actualizar', 'error');
+    mostrarAlerta('Error al guardar cambios', 'error');
   } finally {
     btn.disabled = false;
   }
 }
 
 // =============================================
-// ELIMINAR VARIANTE
+// ELIMINAR
 // =============================================
 async function eliminarVariante(padreId, varId) {
-  var v = accesoriosCache.find(function(a) { return a.id === varId && a._esVariante; });
-  var nombre = v ? v.nombre_variante : 'esta variante';
-  if (!confirm('¿Eliminar "' + nombre + '"? Esta acción no se puede deshacer.')) return;
+  if (!confirm('\u00bfEliminar esta variante? No se puede deshacer.')) return;
   try {
     await db.collection('accesorios').doc(padreId)
       .collection('variantes').doc(varId).delete();
-    mostrarAlerta('"' + nombre + '" eliminada', 'success');
+    mostrarAlerta('Variante eliminada', 'success');
     cargarAccesorios();
   } catch (err) {
     console.error(err);
@@ -521,20 +519,32 @@ async function eliminarVariante(padreId, varId) {
   }
 }
 
-// =============================================
-// BÚSQUEDA / FILTRO
-// =============================================
-function filtrarAccesorios() {
-  var texto     = normalizar(document.getElementById('buscador-acc').value);
-  var categoria = document.getElementById('filtro-categoria').value;
+async function eliminarPadre(id, nombre) {
+  if (!confirm('\u00bfEliminar el grupo "' + nombre + '" y todas sus variantes? No se puede deshacer.')) return;
+  try {
+    var varSnap = await db.collection('accesorios').doc(id).collection('variantes').get();
+    var batch = db.batch();
+    varSnap.docs.forEach(function(d) { batch.delete(d.ref); });
+    batch.delete(db.collection('accesorios').doc(id));
+    await batch.commit();
+    mostrarAlerta('Grupo eliminado', 'success');
+    cargarAccesorios();
+  } catch (err) {
+    console.error(err);
+    mostrarAlerta('Error al eliminar el grupo', 'error');
+  }
+}
 
-  var filtrados = accesoriosCache.filter(function(a) {
-    var coincideTexto = !texto || normalizar(a.nombre + ' ' + (a.marca || '')).includes(texto);
-    var coincideCat   = !categoria || a.categoria === categoria;
-    return coincideTexto && coincideCat;
-  });
-
-  renderTablaAccesorios(filtrados);
+async function eliminarSimple(id, nombre) {
+  if (!confirm('\u00bfEliminar "' + nombre + '"? No se puede deshacer.')) return;
+  try {
+    await db.collection('accesorios').doc(id).delete();
+    mostrarAlerta('"' + nombre + '" eliminado', 'success');
+    cargarAccesorios();
+  } catch (err) {
+    console.error(err);
+    mostrarAlerta('Error al eliminar', 'error');
+  }
 }
 
 // =============================================
@@ -542,18 +552,10 @@ function filtrarAccesorios() {
 // =============================================
 document.addEventListener('DOMContentLoaded', function() {
   cargarAccesorios();
-
   var formNuevo  = document.getElementById('form-acc-nuevo');
-  var formStock  = document.getElementById('form-sumar-stock');
   var formEditar = document.getElementById('form-editar-acc');
-
+  var formSumar  = document.getElementById('form-sumar-stock');
   if (formNuevo)  formNuevo.addEventListener('submit',  agregarAccesorio);
-  if (formStock)  formStock.addEventListener('submit',  sumarStock);
   if (formEditar) formEditar.addEventListener('submit', guardarEdicionAcc);
-
-  var buscador  = document.getElementById('buscador-acc');
-  var filtroCat = document.getElementById('filtro-categoria');
-
-  if (buscador)  buscador.addEventListener('input',   filtrarAccesorios);
-  if (filtroCat) filtroCat.addEventListener('change', filtrarAccesorios);
+  if (formSumar)  formSumar.addEventListener('submit',  sumarStock);
 });

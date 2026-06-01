@@ -489,40 +489,139 @@ body.dark .fr-peso              { background: #0f172a; }
   border-radius: 10px !important;
 }
 
-/* Toggle botón flotante */
+/* ── Tabla de precios — bloques por marca ── */
+.bloque-marca {
+  background: white;
+  border-radius: 10px;
+  box-shadow: var(--sombra);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.marca-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  background: var(--gris-claro);
+  cursor: pointer;
+  user-select: none;
+  gap: 12px;
+}
+.marca-header:hover { background: #e2e8f0; }
+.marca-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.marca-icono { font-size: 13px; color: var(--gris); transition: transform .2s; }
+.marca-badge {
+  font-size: 11px;
+  font-weight: 600;
+  background: white;
+  color: var(--gris);
+  padding: 2px 8px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.marca-contenido { overflow-x: auto; }
+
+/* Tabla interna compacta */
+.tabla-precios { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tabla-precios thead th {
+  background: #f8fafc;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gris);
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--borde);
+}
+.tabla-precios tbody td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 13px;
+  vertical-align: middle;
+}
+.tabla-precios tbody tr:last-child td { border-bottom: none; }
+.tabla-precios tbody tr:hover { background: #f8fafc; }
+
+.check-col { width: 32px; padding: 0 6px !important; }
+.celda-costo { color: var(--gris); font-size: 12px; }
+.margen-bajo   { color: var(--rojo);    font-size: 12px; }
+.margen-medio  { color: var(--naranja); font-size: 12px; }
+.margen-ok     { color: var(--verde);   font-size: 12px; }
+
+/* Barra de selección múltiple */
+.barra-seleccion {
+  display: none;
+  position: fixed;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  color: white;
+  border-radius: 30px;
+  padding: 10px 18px;
+  gap: 14px;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+  z-index: 100;
+  white-space: nowrap;
+}
+.barra-seleccion.visible { display: flex; }
+#texto-seleccion { font-size: 13px; font-weight: 600; }
+
+/* Fila en edición inline */
+.fila-editando td { background: #fffbeb !important; }
+.input-inline {
+  width: 100%;
+  padding: 4px 7px;
+  border: 1px solid var(--borde);
+  border-radius: 5px;
+  font-size: 12px;
+  background: white;
+  color: var(--texto);
+}
+.preview-precios { background: #f1f5f9; border-radius: 8px; padding: 10px 14px; margin-top: 8px; }
+
+/* Dark mode tabla precios */
+body.dark .bloque-marca { background: #1e293b; }
+body.dark .marca-header { background: #162032; }
+body.dark .marca-header:hover { background: #1a2a40; }
+body.dark .tabla-precios thead th { background: #0f172a; color: #94a3b8; border-bottom-color: #334155; }
+body.dark .tabla-precios tbody td { border-bottom-color: #1e293b; }
+body.dark .tabla-precios tbody tr:hover { background: #263548; }
+body.dark .fila-editando td { background: #1a2a10 !important; }
+body.dark .input-inline { background: #0f172a; border-color: #334155; color: white; }
+body.dark .preview-precios { background: #162032; }
+body.dark .barra-seleccion { background: #0f172a; }
+
+/* Toggle botón flotante — siempre arriba a la derecha */
 .toggle-tema {
   position: fixed;
-  bottom: 76px;   /* encima del nav inferior */
-  right: 16px;
-  width: 44px;
-  height: 44px;
+  top: 1rem;
+  right: 1rem;
+  bottom: auto;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: none;
   background: var(--verde);
   color: white;
-  font-size: 20px;
+  font-size: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   box-shadow: 0 3px 12px rgba(0,0,0,0.25);
-  z-index: 400;
+  z-index: 50;
   transition: background .2s, transform .15s;
 }
 .toggle-tema:hover  { opacity: .9; transform: scale(1.08); }
 body.dark .toggle-tema { background: #334155; }
-
-/* En desktop: mostrar toggle en esquina superior derecha */
-@media (min-width: 769px) {
-  .toggle-tema {
-    bottom: auto;
-    top: 10px;
-    right: 16px;
-    width: 38px;
-    height: 38px;
-    font-size: 17px;
-  }
-}
 
 /* =============================================
    MOBILE — Navegación inferior + diseño adaptado

@@ -1,0 +1,5 @@
+REGLAS ESTRICTAS DE DESARROLLO PARA ESTA CARPETA:
+1. ARQUITECTURA VISUAL: La aplicación utiliza estilos CSS nativos (definidos en styles.css) o atributos 'style' en línea inyectados por JavaScript. Está PROHIBIDO usar Tailwind CSS, clases CDN externas o frameworks que dependan de conexión a internet.
+2. COMPORTAMIENTO DE ACORDEONES: Los menús desplegables de productos y accesorios deben manejarse usando 'panel.style.display = "none"' o '"block"' de manera pura en JavaScript para garantizar consistencia.
+3. DISEÑO MOBILE FIRST: La aplicación se utiliza en celulares y tiene una barra de navegación inferior fija. Todo modal flotante (agregar lote, editar, sumar stock) o sección inferior (como el carrito de ventas) debe incluir obligatoriamente un contenedor con 'overflow-y: auto' y un padding inferior de resguardo ('padding-bottom: 90px') para que la barra de navegación nunca tape los botones de acción ("Guardar", "Cancelar", "Confirmar").
+4. ESTÉTICA: Mantener estrictamente el diseño de modo oscuro con contrastes limpios, tipografía legible y badges ordenados con flexbox para que ningún texto aparezca encimado.

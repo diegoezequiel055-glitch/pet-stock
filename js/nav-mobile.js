@@ -49,11 +49,11 @@
   btn.id = 'btn-toggle-tema';
   btn.className = 'toggle-tema';
   btn.title = 'Cambiar tema';
-  btn.textContent = document.body.classList.contains('dark') ? 'Sol' : 'Luna';
+  btn.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
   btn.addEventListener('click', function() {
     var ahora = document.body.classList.toggle('dark');
     localStorage.setItem(CLAVE, ahora ? 'oscuro' : 'claro');
-    btn.textContent = ahora ? 'Sol' : 'Luna';
+    btn.textContent = ahora ? '☀️' : '🌙';
   });
   document.body.appendChild(btn);
 

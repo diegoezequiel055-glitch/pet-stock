@@ -78,6 +78,8 @@ function renderTablaProductos(lista) {
         + '<div style="display:flex;gap:8px">'
           + '<button class="btn btn-sm btn-verde" style="flex:1;justify-content:center" onclick="abrirModalLote(\'' + p.id + '\')">+ Lote</button>'
           + '<button class="btn btn-sm btn-gris"  style="flex:1;justify-content:center" onclick="verLotes(\'' + p.id + '\')">Ver lotes</button>'
+          + '<button class="btn btn-sm btn-gris" style="justify-content:center;padding:5px 10px" onclick="abrirModalEditarProducto(\'' + p.id + '\')" title="Editar producto">✏️</button>'
+          + '<button class="btn btn-sm btn-rojo" style="justify-content:center;padding:5px 10px" onclick="eliminarProducto(\'' + p.id + '\',\'' + (p.marca + ' ' + p.nombre).replace(/'/g,"&#39;") + '\')" title="Eliminar producto">🗑️</button>'
         + '</div>'
       + '</div>'
     + '</div>';
@@ -393,15 +395,65 @@ function filtrarProductos() {
 // =============================================
 // INIT
 // =============================================
+// =============================================
+// EDITAR PRODUCTO
+// =============================================
+function abrirModalEditarProducto(id) {
+  productoSeleccionadoId = id;
+  var p = productosCache.find(function(x) { return x.id === id; });
+  if (!p) return;
+  document.getElementById('edit-prod-marca').value     = p.marca || '';
+  document.getElementById('edit-prod-nombre').value    = p.nombre || '';
+  document.getElementById('edit-prod-peso').value      = p.unidadPeso || '';
+  abrirModal('modal-editar-producto');
+}
+
+async function guardarEdicionProducto(e) {
+  e.preventDefault();
+  var btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  try {
+    await db.collection('productos').doc(productoSeleccionadoId).update({
+      marca:      document.getElementById('edit-prod-marca').value.trim(),
+      nombre:     document.getElementById('edit-prod-nombre').value.trim(),
+      unidadPeso: document.getElementById('edit-prod-peso').value.trim()
+    });
+    mostrarAlerta('Producto actualizado', 'success');
+    cerrarModal('modal-editar-producto');
+    cargarProductos();
+  } catch (err) {
+    console.error(err);
+    mostrarAlerta('Error al guardar', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// =============================================
+// ELIMINAR PRODUCTO
+// =============================================
+async function eliminarProducto(id, nombre) {
+  if (!confirm('\u00bfEliminar "' + nombre + '"? Se eliminarán también todos sus lotes. No se puede deshacer.')) return;
+  try {
+    var lotesSnap = await db.collection('productos').doc(id).collection('lotes').get();
+    var batch = db.batch();
+    lotesSnap.docs.forEach(function(d) { batch.delete(d.ref); });
+    batch.delete(db.collection('productos').doc(id));
+    await batch.commit();
+    mostrarAlerta('"' + nombre + '" eliminado', 'success');
+    cargarProductos();
+  } catch (err) {
+    console.error(err);
+    mostrarAlerta('Error al eliminar el producto', 'error');
+  }
+}
+
+// =============================================
+// INIT
+// =============================================
 document.addEventListener('DOMContentLoaded', () => {
   cargarProductos();
-
-  // Formularios
   document.getElementById('form-producto')?.addEventListener('submit', agregarProducto);
   document.getElementById('form-lote')?.addEventListener('submit', agregarLote);
-  document.getElementById('form-venta')?.addEventListener('submit', registrarVenta);
-
-  // Búsqueda en tiempo real
-  document.getElementById('buscador')?.addEventListener('input', filtrarProductos);
-  document.getElementById('filtro-especie')?.addEventListener('change', filtrarProductos);
+  document.getElementById('form-editar-producto')?.addEventListener('submit', guardarEdicionProducto);
 });
