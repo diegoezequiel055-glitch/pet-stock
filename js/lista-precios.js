@@ -127,46 +127,78 @@ function renderLista(lista) {
 
 function renderBloqueMarca(marca, productos) {
   const ordenados = [...productos].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
-  const filas = ordenados.map(p => renderFilaProducto(p)).join('');
-  const totalProductos = productos.length;
-  const marcaEsc = marca.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const marcaEsc  = marca.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const total     = productos.length;
+  const isMobile  = window.innerWidth < 769;
 
-  return `
+  const cabecera = `
     <div class="bloque-marca">
       <div class="marca-header" onclick="toggleMarca(this)">
         <div class="marca-titulo">
           <span class="marca-icono">▾</span>
           <strong>${marca}</strong>
-          <span class="marca-badge">${totalProductos} producto${totalProductos !== 1 ? 's' : ''}</span>
+          <span class="marca-badge">${total} producto${total !== 1 ? 's' : ''}</span>
         </div>
         <button class="btn btn-sm btn-naranja"
           onclick="event.stopPropagation(); abrirModalActualizarMarca('${marcaEsc}')">
-          📈 Actualizar costos
+          📈 ${isMobile ? 'Costos' : 'Actualizar costos'}
         </button>
       </div>
-      <div class="marca-contenido">
-        <table class="tabla-precios">
-          <thead>
-            <tr>
-              <th class="check-col">
-                <input type="checkbox" class="check-all-marca" data-marca="${marcaEsc}"
-                  onchange="seleccionarTodaMarca(this)" title="Seleccionar todos">
-              </th>
-              <th>Producto</th>
-              <th>Especie</th>
-              <th>Peso</th>
-              <th>Costo</th>
-              <th>Minorista</th>
-              <th>% Min.</th>
-              <th>Mayorista</th>
-              <th>% May.</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>${filas}</tbody>
-        </table>
-      </div>
-    </div>`;
+      <div class="marca-contenido">`;
+
+  const cierre = `</div></div>`;
+
+  if (isMobile) {
+    // ── MOBILE: tarjetas verticales ───────────────────────
+    const cards = ordenados.map(p => {
+      const mMin    = p.costo > 0 && p.precioMinorista > 0
+                      ? Math.round(((p.precioMinorista - p.costo) / p.costo) * 100) : null;
+      const mColor  = mMin === null ? '' : mMin < 20 ? '#ef4444' : mMin < 40 ? '#f97316' : '#4ade80';
+      const nEsc    = p.nombre.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+      return `
+        <div style="background:#1e293b;border:1px solid #1e3a5f;border-radius:10px;padding:12px 14px;margin:0 10px 8px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+            <div style="flex:1;min-width:0">
+              <div style="color:#fff;font-weight:700;font-size:14px;margin-bottom:4px">${p.nombre}</div>
+              <div style="display:flex;gap:5px;flex-wrap:wrap">
+                ${p.especie  ? `<span style="background:#374151;color:#d1d5db;padding:1px 7px;border-radius:5px;font-size:11px;font-weight:600">${p.especie}</span>` : ''}
+                ${p.unidadPeso ? `<span style="background:#0f172a;color:#4ade80;padding:1px 7px;border-radius:5px;font-size:11px;font-weight:600">${p.unidadPeso}</span>` : ''}
+              </div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;margin-left:10px">
+              <div style="font-size:18px;font-weight:900;color:#4ade80;line-height:1.1">${formatPrecio(p.precioMinorista)}</div>
+              <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase">Minorista</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+            ${p.precioMayorista > 0 ? `<span style="background:#0f172a;color:#94a3b8;padding:2px 9px;border-radius:5px;font-size:12px">May: ${formatPrecio(p.precioMayorista)}</span>` : ''}
+            ${mMin !== null ? `<span style="background:#0f172a;color:${mColor};padding:2px 9px;border-radius:5px;font-size:12px;font-weight:700">${mMin}% margen</span>` : ''}
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-sm btn-gris" style="flex:1;justify-content:center" onclick="abrirEdicionInline('${p.id}')">✏️ Editar</button>
+            <button class="btn btn-sm btn-rojo" style="padding:5px 12px;justify-content:center" onclick="confirmarEliminar('${p.id}','${nEsc}')">🗑</button>
+          </div>
+        </div>`;
+    }).join('');
+    return cabecera + cards + cierre;
+  }
+
+  // ── DESKTOP: tabla compacta ───────────────────────────
+  const filas = ordenados.map(p => renderFilaProducto(p)).join('');
+  return cabecera + `
+    <table class="tabla-precios">
+      <thead>
+        <tr>
+          <th class="check-col">
+            <input type="checkbox" class="check-all-marca" data-marca="${marcaEsc}"
+              onchange="seleccionarTodaMarca(this)" title="Seleccionar todos">
+          </th>
+          <th>Producto</th><th>Especie</th><th>Peso</th><th>Costo</th>
+          <th>Minorista</th><th>% Min.</th><th>Mayorista</th><th>% May.</th><th></th>
+        </tr>
+      </thead>
+      <tbody>${filas}</tbody>
+    </table>` + cierre;
 }
 
 function renderFilaProducto(p) {
@@ -481,187 +513,4 @@ async function ejecutarEliminar() {
     await db.collection('precios').doc(productoAEliminar.id).delete();
     mostrarAlerta(`"${productoAEliminar.nombre}" eliminado`, 'success');
     cerrarModal('modal-confirmar-eliminar');
-    productoAEliminar = null;
-    cargarPrecios();
-  } catch (err) {
-    console.error(err);
-    mostrarAlerta('Error al eliminar', 'error');
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-// =============================================
-// SELECCIÓN MÚLTIPLE Y ELIMINACIÓN EN LOTE
-// =============================================
-function obtenerSeleccionados() {
-  return [...document.querySelectorAll('.check-producto:checked')].map(cb => cb.value);
-}
-
-function actualizarBarraSeleccion() {
-  const ids = obtenerSeleccionados();
-  const barra = document.getElementById('barra-seleccion');
-  const texto = document.getElementById('texto-seleccion');
-  if (!barra) return;
-
-  if (ids.length > 0) {
-    barra.classList.add('visible');
-    texto.textContent = `${ids.length} producto${ids.length !== 1 ? 's' : ''} seleccionado${ids.length !== 1 ? 's' : ''}`;
-  } else {
-    barra.classList.remove('visible');
-  }
-}
-
-function seleccionarTodaMarca(checkbox) {
-  const marca = checkbox.dataset.marca;
-  // Buscar la tabla que contiene este checkbox
-  const tabla = checkbox.closest('table');
-  const checks = tabla.querySelectorAll('.check-producto');
-  checks.forEach(cb => { cb.checked = checkbox.checked; });
-  actualizarBarraSeleccion();
-}
-
-function deseleccionarTodo() {
-  document.querySelectorAll('.check-producto, .check-all-marca').forEach(cb => { cb.checked = false; });
-  actualizarBarraSeleccion();
-}
-
-async function eliminarSeleccionados() {
-  const ids = obtenerSeleccionados();
-  if (ids.length === 0) return;
-
-  const confirmar = confirm(`¿Eliminar ${ids.length} producto${ids.length !== 1 ? 's' : ''}? Esta acción no se puede deshacer.`);
-  if (!confirmar) return;
-
-  const btn = document.getElementById('btn-eliminar-seleccionados');
-  if (btn) btn.disabled = true;
-
-  try {
-    const batch = db.batch();
-    ids.forEach(id => batch.delete(db.collection('precios').doc(id)));
-    await batch.commit();
-    mostrarAlerta(`${ids.length} producto${ids.length !== 1 ? 's' : ''} eliminado${ids.length !== 1 ? 's' : ''}`, 'success');
-    deseleccionarTodo();
-    cargarPrecios();
-  } catch (err) {
-    console.error(err);
-    mostrarAlerta('Error al eliminar', 'error');
-  } finally {
-    if (btn) btn.disabled = false;
-  }
-}
-
-// =============================================
-// ACTUALIZAR COSTOS DE UNA MARCA COMPLETA
-// =============================================
-function abrirModalActualizarMarca(marca) {
-  marcaActualizar = marca;
-  document.getElementById('upd-marca-nombre').textContent = marca;
-  document.getElementById('upd-porcentaje').value = '';
-  document.getElementById('upd-preview').innerHTML = '';
-  abrirModal('modal-actualizar-marca');
-}
-
-function previewActualizarMarca() {
-  const pct = parseFloat(document.getElementById('upd-porcentaje').value) || 0;
-  const productos = preciosCache.filter(p => p.marca === marcaActualizar);
-  const preview = document.getElementById('upd-preview');
-
-  if (!pct || productos.length === 0) {
-    preview.innerHTML = '';
-    return;
-  }
-
-  preview.innerHTML = `
-    <table class="tabla-precios" style="margin-top:12px">
-      <thead><tr>
-        <th>Producto</th>
-        <th>Costo actual</th>
-        <th>Costo nuevo</th>
-        <th>Min. nuevo</th>
-        <th>May. nuevo</th>
-      </tr></thead>
-      <tbody>
-        ${productos.map(p => {
-          const nuevoCosto = Math.round(p.costo * (1 + pct / 100));
-          const nuevoMin   = Math.round(nuevoCosto * (1 + (p.margenMinorista || 0) / 100));
-          const nuevoMay   = Math.round(nuevoCosto * (1 + (p.margenMayorista || 0) / 100));
-          return `<tr>
-            <td>${p.nombre}</td>
-            <td>${formatPrecio(p.costo)}</td>
-            <td class="margen-ok"><strong>${formatPrecio(nuevoCosto)}</strong></td>
-            <td>${formatPrecio(nuevoMin)}</td>
-            <td>${formatPrecio(nuevoMay)}</td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>`;
-}
-
-async function confirmarActualizarMarca() {
-  const pct = parseFloat(document.getElementById('upd-porcentaje').value);
-  if (!pct || isNaN(pct)) {
-    mostrarAlerta('Ingresá un porcentaje válido', 'warning');
-    return;
-  }
-
-  const productos = preciosCache.filter(p => p.marca === marcaActualizar);
-  const btn = document.getElementById('btn-confirmar-marca');
-  btn.disabled = true;
-
-  try {
-    const batch = db.batch();
-    for (const p of productos) {
-      const nuevoCosto = Math.round(p.costo * (1 + pct / 100));
-      const nuevoMin   = Math.round(nuevoCosto * (1 + (p.margenMinorista || 0) / 100));
-      const nuevoMay   = Math.round(nuevoCosto * (1 + (p.margenMayorista || 0) / 100));
-      batch.update(db.collection('precios').doc(p.id), {
-        costo:               nuevoCosto,
-        precioMinorista:     nuevoMin,
-        precioMayorista:     nuevoMay,
-        ultimaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
-      });
-    }
-    await batch.commit();
-
-    mostrarAlerta(`✅ ${productos.length} productos de ${marcaActualizar} actualizados (+${pct}%)`, 'success');
-    cerrarModal('modal-actualizar-marca');
-    cargarPrecios();
-  } catch (err) {
-    console.error(err);
-    mostrarAlerta('Error al actualizar la marca', 'error');
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-// =============================================
-// BÚSQUEDA / FILTRO
-// =============================================
-function filtrarPrecios() {
-  renderLista(preciosCache);
-}
-
-// =============================================
-// INIT
-// =============================================
-document.addEventListener('DOMContentLoaded', () => {
-  cargarPrecios();
-
-  document.getElementById('form-nuevo-precio')?.addEventListener('submit', agregarPrecio);
-  document.getElementById('buscador-p')?.addEventListener('input', filtrarPrecios);
-  document.getElementById('filtro-especie-p')?.addEventListener('change', filtrarPrecios);
-
-  // Preview de márgenes en modal nuevo producto
-  ['np-costo','np-precio-min','np-precio-may'].forEach(function(id) {
-    document.getElementById(id)?.addEventListener('input', calcularPreviewNuevo);
-  });
-
-  // Preview de actualización de marca
-  document.getElementById('upd-porcentaje')?.addEventListener('input', previewActualizarMarca);
-
-  // Campos del modal edición mobile
-  ['epm-costo','epm-precio-min','epm-precio-may'].forEach(function(id) {
-    document.getElementById(id)?.addEventListener('input', recalcularModal);
-  });
-});
+    p

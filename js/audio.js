@@ -403,20 +403,4 @@ function dictarCampo(inputId, esNumero) {
     _dictadoActivo = false;
     if (_btnDictadoActual) {
       _btnDictadoActual.textContent = '🎙️';
-      _btnDictadoActual.classList.remove('dictando');
-    }
-  };
-
-  _reconocedorCampo.onerror = (event) => {
-    _dictadoActivo = false;
-    if (_btnDictadoActual) {
-      _btnDictadoActual.textContent = '🎙️';
-      _btnDictadoActual.classList.remove('dictando');
-    }
-    if (event.error !== 'no-speech') {
-      mostrarAlerta('Error de micrófono: ' + event.error, 'error');
-    }
-  };
-
-  _reconocedorCampo.start();
-}
+      _btnDictadoActu

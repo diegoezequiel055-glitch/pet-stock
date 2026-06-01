@@ -571,21 +571,11 @@ async function iniciarImportacion() {
   }
 
   document.getElementById('barra').style.width = '100%';
+  document.getElementById('barra').style.width = '100%';
   document.getElementById('txt-progreso').textContent = '✅ Importación completada';
-  log('─────────────────────────────────────', '');
-  log(`✔ Importados: ${importados}`, 'ok');
-  if (omitidos) log(`⏭ Omitidos (ya existían): ${omitidos}`, 'skip');
-  if (errores)  log(`✘ Errores: ${errores}`, 'err');
-  log('Podés ir a Ver lista de precios para revisar todo.', '');
-
-  btn.disabled = false;
+  log('────────── FIN ──────────');
 }
-
-// ── INIT ─────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  actualizarStats();
-  renderPrev();
-});
 </script>
+
 </body>
 </html>

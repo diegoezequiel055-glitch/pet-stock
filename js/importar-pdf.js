@@ -354,17 +354,4 @@ async function confirmarImportacionPDF() {
       for (const p of porcion) {
         batch.set(db.collection('precios').doc(), p);
       }
-      await batch.commit();
-      importados += porcion.length;
-    }
-
-    mostrarAlerta(`✅ ${importados} productos importados correctamente`, 'success');
-    cerrarModal('modal-importar-pdf');
-    cargarPrecios();
-
-  } catch (err) {
-    console.error(err);
-    mostrarAlerta('Error al importar: ' + err.message, 'error');
-    if (btn) btn.disabled = false;
-  }
-}
+      awai

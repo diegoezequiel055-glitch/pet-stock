@@ -451,19 +451,4 @@ async function eliminarProducto(id, nombre) {
 
 // =============================================
 // INIT
-// =============================================
-document.addEventListener('DOMContentLoaded', function() {
-  cargarProductos();
-
-  var fp = document.getElementById('form-producto');
-  var fl = document.getElementById('form-lote');
-  var fe = document.getElementById('form-editar-producto');
-  var bus = document.getElementById('buscador');
-  var filt = document.getElementById('filtro-especie');
-
-  if (fp)   fp.addEventListener('submit', agregarProducto);
-  if (fl)   fl.addEventListener('submit', agregarLote);
-  if (fe)   fe.addEventListener('submit', guardarEdicionProducto);
-  if (bus)  bus.addEventListener('input', filtrarProductos);
-  if (filt) filt.addEventListener('change', filtrarProductos);
-});
+// ========

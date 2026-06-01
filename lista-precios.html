@@ -258,80 +258,12 @@
     body.dark .btn-especie.activo-gatos  { background: #3b1a5f; border-color: #7c3aed; }
 
     /* ======================================================
-       MOBILE — Tarjetas en lugar de tabla
+       MOBILE — Header compacto (las tarjetas las renderiza el JS)
     ====================================================== */
     @media (max-width: 768px) {
-      /* El contenedor no necesita scroll horizontal */
       .marca-contenido { overflow-x: visible; }
-
-      /* Quitar estructura de tabla */
-      .tabla-precios,
-      .tabla-precios tbody { display: block; width: 100%; }
-      .tabla-precios thead { display: none; }
-
-      /* Cada fila se convierte en tarjeta */
-      .tabla-precios tr {
-        display: flex;
-        flex-direction: column;
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        margin: 6px 10px;
-        padding: 10px 12px;
-      }
-      body.dark .tabla-precios tr {
-        background: #1e293b;
-        border-color: #334155;
-      }
-
-      /* Cada celda: etiqueta a la izquierda, valor a la derecha */
-      .tabla-precios td {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 4px 0;
-        border: none !important;
-        font-size: 13px;
-        white-space: normal;
-        min-height: 24px;
-      }
-      .tabla-precios td::before {
-        content: attr(data-label);
-        font-size: 10px;
-        font-weight: 700;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: .4px;
-        flex-shrink: 0;
-        margin-right: 10px;
-        min-width: 70px;
-      }
-
-      /* Ocultar columnas menos relevantes en mobile */
-      .tabla-precios td.check-col { display: none; }
-      .tabla-precios td[data-label="% Min."],
-      .tabla-precios td[data-label="% May."],
-      .tabla-precios td[data-label="Costo"] { display: none; }
-
-      /* Acciones al final de la tarjeta */
-      .tabla-precios td.acciones {
-        display: flex;
-        justify-content: flex-end;
-        gap: 6px;
-        padding-top: 8px;
-        border-top: 1px solid #f1f5f9 !important;
-        margin-top: 4px;
-      }
-      body.dark .tabla-precios td.acciones { border-top-color: #334155 !important; }
-      .tabla-precios td.acciones::before { display: none; }
-
-      /* Header de marca compacto */
       .marca-header { padding: 10px 12px; }
       .marca-header .btn-sm { font-size: 11px; padding: 4px 8px; }
-
-      /* Inline editing en mobile → usar modal (ver JS) */
-      .fila-editando td::before { display: none; }
-      .fila-editando td { display: block; padding: 4px 0; }
     }
   </style>
 </head>
@@ -500,6 +432,7 @@
 </div>
 
 
+
 <!-- ===== MODAL: EDITAR PRECIO (mobile y desktop) ===== -->
 <div class="modal" id="modal-editar-precio">
   <div class="modal-box" style="max-width:480px;overflow-y:auto;padding-bottom:90px">
@@ -538,7 +471,6 @@
         <input type="number" id="epm-precio-may" min="0" step="1" placeholder="0" oninput="recalcularModal()">
       </div>
     </div>
-    <!-- Indicador de márgenes calculados -->
     <div id="epm-margenes" style="display:none;gap:12px;font-size:13px;padding:8px 12px;background:var(--gris-claro);border-radius:8px;margin-bottom:12px;flex-wrap:wrap">
       <span>Min: <strong id="epm-mrg-min">0%</strong></span>
       <span>May: <strong id="epm-mrg-may">0%</strong></span>
@@ -549,6 +481,7 @@
     </div>
   </div>
 </div>
+
 
 <!-- ===== MODAL: CONFIRMAR ELIMINACIÓN INDIVIDUAL ===== -->
 <div class="modal" id="modal-confirmar-eliminar">
@@ -572,8 +505,6 @@
     <button class="cerrar-modal" onclick="cerrarModal('modal-importar-pdf')">×</button>
     <h2>📄 Importar lista desde PDF</h2>
     <p class="subtitulo">El sistema lee el PDF, detecta las columnas y te muestra una previsualización antes de importar</p>
-
-    <!-- PASO 1: Subir archivo -->
     <div class="form-grupo">
       <label>Seleccioná el archivo PDF *</label>
       <input type="file" id="pdf-archivo" accept=".pdf" style="padding:8px;border:1px solid var(--borde);border-radius:var(--radio);font-size:14px;width:100%">
@@ -584,8 +515,6 @@
       </button>
     </div>
     <p id="pdf-estado" style="font-size:13px;min-height:20px"></p>
-
-    <!-- PASO 2: Config columnas + preview (se muestra luego de procesar) -->
     <div id="pdf-paso-config" style="display:none"></div>
   </div>
 </div>
@@ -594,37 +523,25 @@
 <!-- ===== SCRIPTS ===== -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-<script src="js/firebase-config.js?v=9"></script>
-<script src="js/utils.js?v=9"></script>
-<script src="js/lista-precios.js?v=9"></script>
-<script src="js/importar-pdf.js?v=9"></script>
-<script src="js/nav-mobile.js?v=9"></script>
+<script src="js/firebase-config.js?v=10"></script>
+<script src="js/utils.js?v=10"></script>
+<script src="js/lista-precios.js?v=10"></script>
+<script src="js/importar-pdf.js?v=10"></script>
+<script src="js/nav-mobile.js?v=10"></script>
 
 <script>
   // ---- Filtro rápido de especie (botones) ----
   function filtrarEspecie(val) {
-    // Actualizar select oculto para que filtrarPrecios() lo lea
     document.getElementById('filtro-especie-p').value = val;
-
-    // Estilos de botones
     document.getElementById('btn-todos').className   = 'btn-especie' + (val === '' ? ' activo-todos' : '');
     document.getElementById('btn-perros').className  = 'btn-especie' + (val === 'perros' ? ' activo-perros' : '');
     document.getElementById('btn-gatos').className   = 'btn-especie' + (val === 'gatos'  ? ' activo-gatos'  : '');
-
     filtrarPrecios();
   }
 
-  // Mostrar preview cuando hay datos en el modal de nuevo precio
-  ['np-costo','np-margen-min','np-margen-may'].forEach(id => {
-    document.getElementById(id).addEventListener('input', () => {
-      const box = document.getElementById('np-preview-box');
-      box.style.display = document.getElementById('np-costo').value ? 'flex' : 'none';
-    });
-  });
-
-  // Botón limpiar búsqueda (X)
+  // Botón limpiar búsqueda
   function limpiarBusqueda() {
-    const input = document.getElementById('buscador-p');
+    var input = document.getElementById('buscador-p');
     input.value = '';
     document.getElementById('btn-limpiar-busqueda').style.display = 'none';
     document.getElementById('leyenda-margenes').style.display = 'flex';
@@ -632,18 +549,23 @@
     input.focus();
   }
 
-  // Mostrar/ocultar X según haya texto
-  document.getElementById('buscador-p').addEventListener('input', function() {
-    const tieneTexto = this.value.length > 0;
-    document.getElementById('btn-limpiar-busqueda').style.display = tieneTexto ? 'block' : 'none';
-    document.getElementById('leyenda-margenes').style.display = tieneTexto ? 'none' : 'flex';
-  });
+  document.addEventListener('DOMContentLoaded', function() {
+    // Mostrar/ocultar X según haya texto
+    document.getElementById('buscador-p').addEventListener('input', function() {
+      var tieneTexto = this.value.length > 0;
+      document.getElementById('btn-limpiar-busqueda').style.display = tieneTexto ? 'block' : 'none';
+      document.getElementById('leyenda-margenes').style.display = tieneTexto ? 'none' : 'flex';
+    });
 
-  // Autocompletar marcas ya existentes en la lista
-  async function cargarMarcasSugeridas() {
-    const dl = document.getElementById('lista-marcas');
-    const snap = await db.collection('precios').get();
-    const marcas = [...new Set(snap.docs.map(d => d.data().marca))].sort();
-    dl.innerHTML = marcas.map(m => `<option value="${m}">`).join('');
-  }
-  document.addEventListener('DOMContentLoaded', cargarMa
+    // Autocompletar marcas
+    db.collection('precios').get().then(function(snap) {
+      var dl = document.getElementById('lista-marcas');
+      if (!dl) return;
+      var marcas = [...new Set(snap.docs.map(function(d) { return d.data().marca; }))].sort();
+      dl.innerHTML = marcas.map(function(m) { return '<option value="' + m + '">'; }).join('');
+    });
+  });
+</script>
+
+</body>
+</html>

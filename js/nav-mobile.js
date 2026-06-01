@@ -54,7 +54,4 @@
     var ahora = document.body.classList.toggle('dark');
     localStorage.setItem(CLAVE, ahora ? 'oscuro' : 'claro');
     btn.textContent = ahora ? '☀️' : '🌙';
-  });
-  document.body.appendChild(btn);
-
-})();
+  })

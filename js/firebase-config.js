@@ -20,4 +20,4 @@ if (!firebase.apps || !firebase.apps.length) {
 }
 
 // Instancia de Firestore disponible globalmente
-const db = firebase.firestore();
+const db = 

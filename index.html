@@ -193,12 +193,12 @@
       const snapAcc = await db.collection('accesorios').where('stock', '<=', 0).get();
       document.getElementById('hoy-sin-stock').textContent = snapAcc.size;
 
-    } catch (err) {
-      console.error(err);
+    } catch(err) {
+      console.error('Error cargando stats:', err);
     }
   }
 
-  document.addEventListener('DOMContentLoaded', cargarResumenHoy);
+  document.addEventListener('DOMContentLoaded', cargarStats);
 </script>
 
 </body>

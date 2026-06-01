@@ -2950,127 +2950,32 @@ const PRODUCTOS = [
     "precioMayorista": 45909,
     "margenMinorista": 0,
     "margenMayorista": 0
-  },
-  {
-    "nombre": "Gandum Perro Adulto",
-    "marca": "Alimentos Varios",
-    "especie": "perros",
-    "unidadPeso": "20 kg",
-    "costo": 0,
-    "precioMinorista": 18000,
-    "precioMayorista": 16364,
-    "margenMinorista": 0,
-    "margenMayorista": 0
-  },
-  {
-    "nombre": "Mezcla para Gallinas",
-    "marca": "Cereales",
-    "especie": "perros",
-    "unidadPeso": "24 kg",
-    "costo": 0,
-    "precioMinorista": 16000,
-    "precioMayorista": 16000,
-    "margenMinorista": 0,
-    "margenMayorista": 0
-  },
-  {
-    "nombre": "Mezcla para Canarios",
-    "marca": "Cereales",
-    "especie": "perros",
-    "unidadPeso": "10 kg",
-    "costo": 0,
-    "precioMinorista": 19500,
-    "precioMayorista": 19500,
-    "margenMinorista": 0,
-    "margenMayorista": 0
-  },
-  {
-    "nombre": "Alpiste",
-    "marca": "Cereales",
-    "especie": "perros",
-    "unidadPeso": "10 kg",
-    "costo": 0,
-    "precioMinorista": 21800,
-    "precioMayorista": 21800,
-    "margenMinorista": 0,
-    "margenMayorista": 0
-  },
-  {
-    "nombre": "Mijo",
-    "marca": "Cereales",
-    "especie": "perros",
-    "unidadPeso": "10 kg",
-    "costo": 0,
-    "precioMinorista": 7300,
-    "precioMayorista": 7300,
-    "margenMinorista": 0,
-    "margenMayorista": 0
-  },
-  {
-    "nombre": "Girasol",
-    "marca": "Cereales",
-    "especie": "perros",
-    "unidadPeso": "10 kg",
-    "costo": 0,
-    "precioMinorista": 14000,
-    "precioMayorista": 14000,
-    "margenMinorista": 0,
-    "margenMayorista": 0
-  },
-  {
-    "nombre": "Conejín Ganave",
-    "marca": "Cereales",
-    "especie": "perros",
-    "unidadPeso": "25 kg",
-    "costo": 0,
-    "precioMinorista": 20000,
-    "precioMayorista": 20000,
-    "margenMinorista": 0,
-    "margenMayorista": 0
-  }
 ];
 
-async function iniciarImportacion() {
-  const btn    = document.getElementById('btn-importar');
-  const estado = document.getElementById('estado');
-  btn.disabled = true;
-  estado.style.display = 'block';
-  estado.style.background = '#e3f2fd';
-  estado.style.color = '#1565c0';
+// Función de importación masiva a Firestore
+async function importarTodos() {
+  var btn = document.getElementById('btn-importar');
+  var log = document.getElementById('log-importar');
+  if (btn) btn.disabled = true;
+  if (log) log.textContent = 'Importando ' + PRODUCTOS.length + ' productos...\n';
 
-  try {
-    const LOTE = 200;
-    let importados = 0;
-
-    for (let i = 0; i < PRODUCTOS.length; i += LOTE) {
-      const porcion = PRODUCTOS.slice(i, i + LOTE);
-      const batch   = db.batch();
-
-      for (const p of porcion) {
-        batch.set(db.collection('precios').doc(), {
-          ...p,
-          ultimaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      }
-
-      await batch.commit();
-      importados += porcion.length;
-      estado.textContent = `⏳ Importando... ${importados} / ${PRODUCTOS.length}`;
+  var ok = 0; var err = 0;
+  for (var p of PRODUCTOS) {
+    try {
+      await db.collection('precios').add(Object.assign({
+        ultimaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
+      }, p));
+      ok++;
+      if (log) log.textContent += '✅ ' + p.marca + ' — ' + p.nombre + '\n';
+    } catch(e) {
+      err++;
+      if (log) log.textContent += '❌ Error: ' + p.nombre + '\n';
     }
-
-    estado.style.background = '#e8f5e9';
-    estado.style.color = '#2e7d32';
-    estado.innerHTML = `✅ <strong>${importados} productos importados correctamente.</strong> 
-      <a href="lista-precios.html" style="color:var(--verde);font-weight:700">→ Ver lista de precios</a>`;
-
-  } catch (err) {
-    console.error(err);
-    estado.style.background = '#ffebee';
-    estado.style.color = '#c62828';
-    estado.textContent = '❌ Error: ' + err.message;
-    btn.disabled = false;
   }
+  if (log) log.textContent += '\n--- Fin: ' + ok + ' ok, ' + err + ' errores ---';
+  if (btn) btn.disabled = false;
 }
 </script>
+
 </body>
 </html>

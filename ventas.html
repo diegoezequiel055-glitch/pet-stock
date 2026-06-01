@@ -201,10 +201,10 @@
 
   // Actualizar contador de resultados luego del render
   const originalRender = renderTablaVentas;
-  window.renderTablaVentas = function(lista) {
+  renderTablaVentas = function(lista) {
     originalRender(lista);
-    const el = document.getElementById('contador-ventas');
-    if (el) el.textContent = lista.length > 0 ? `${lista.length} venta${lista.length !== 1 ? 's' : ''}` : '';
+    var cont = document.getElementById('cont-resultados');
+    if (cont) cont.textContent = lista.length + ' resultado' + (lista.length !== 1 ? 's' : '');
   };
 </script>
 
