@@ -4,118 +4,144 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lista de Precios — Pet Stock</title>
-  <link rel="stylesheet" href="css/styles.css?v=7">
+  <link rel="stylesheet" href="css/styles.css?v=9">
   <style>
-    /* ---- Bloques por marca ---- */
+    /* ======================================================
+       BLOQUES POR MARCA
+    ====================================================== */
     .bloque-marca {
       background: white;
       border-radius: 10px;
       box-shadow: var(--sombra);
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       overflow: hidden;
     }
     .marca-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 13px 18px;
+      padding: 11px 14px;
       background: var(--gris-claro);
       cursor: pointer;
       user-select: none;
-      gap: 12px;
+      gap: 10px;
       transition: background .15s;
     }
     .marca-header:hover { background: #dde3e7; }
     .marca-titulo {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
+      flex: 1;
+      min-width: 0;
     }
-    .marca-icono { font-size: 14px; color: var(--gris); width: 14px; }
+    .marca-icono { font-size: 13px; color: var(--gris); flex-shrink: 0; }
+    .marca-titulo strong { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .marca-badge {
-      font-size: 12px;
+      font-size: 11px;
       background: var(--verde);
       color: white;
-      padding: 2px 9px;
-      border-radius: 12px;
-      font-weight: 600;
+      padding: 1px 8px;
+      border-radius: 10px;
+      font-weight: 700;
+      flex-shrink: 0;
     }
-    .marca-contenido { padding: 0; }
 
-    /* ---- Tabla de precios ---- */
-    .tabla-precios { width: 100%; border-collapse: collapse; }
+    /* Contenedor con scroll horizontal en mobile */
+    .marca-contenido {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ======================================================
+       TABLA COMPACTA
+    ====================================================== */
+    .tabla-precios {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 640px; /* fuerza scroll en pantallas chicas */
+    }
     .tabla-precios thead th {
-      background: #f9fbfc;
-      padding: 9px 12px;
-      font-size: 12px;
-      font-weight: 600;
+      background: #f4f7f9;
+      padding: 7px 10px;
+      font-size: 11px;
+      font-weight: 700;
       color: var(--gris);
       text-align: left;
       border-bottom: 1px solid var(--borde);
+      white-space: nowrap;
     }
     .tabla-precios tbody td {
-      padding: 9px 12px;
-      font-size: 14px;
-      border-bottom: 1px solid var(--gris-claro);
+      padding: 7px 10px;
+      font-size: 13px;
+      border-bottom: 1px solid #f0f3f5;
       vertical-align: middle;
+      white-space: nowrap;
     }
     .tabla-precios tbody tr:last-child td { border-bottom: none; }
-    .tabla-precios tbody tr:hover { background: #fafbfc; }
+    .tabla-precios tbody tr:hover { background: #f8fafc; }
 
-    /* ---- Columna checkbox ---- */
-    .check-col {
-      width: 36px;
-      text-align: center;
-      padding: 9px 6px !important;
+    /* Columna nombre: puede achicarse */
+    .tabla-precios td:nth-child(2),
+    .tabla-precios th:nth-child(2) {
+      white-space: normal;
+      min-width: 130px;
     }
-    .check-col input[type="checkbox"] {
-      width: 16px;
-      height: 16px;
-      cursor: pointer;
+
+    /* ---- Checkbox ---- */
+    .check-col {
+      width: 30px;
+      text-align: center;
+      padding: 6px 4px !important;
+    }
+    .check-col input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; }
+
+    /* ---- Celda costo (menos importante, color gris) ---- */
+    .celda-costo { color: var(--gris); font-size: 12px; }
+
+    /* ---- Márgenes ---- */
+    .margen-ok    { color: var(--verde);   font-weight: 700; font-size: 12px; }
+    .margen-medio { color: var(--naranja); font-weight: 700; font-size: 12px; }
+    .margen-bajo  { color: var(--rojo);    font-weight: 700; font-size: 12px; }
+
+    /* ---- Acciones compactas ---- */
+    .tabla-precios td.acciones {
+      display: flex;
+      gap: 4px;
+      padding: 5px 8px !important;
+      white-space: nowrap;
     }
 
     /* ---- Edición inline ---- */
-    .fila-editando { background: #fffde7 !important; }
+    .fila-editando td { background: #fffde7 !important; }
     .input-inline {
-      border: 1px solid var(--azul-claro);
+      border: 1px solid #93c5fd;
       border-radius: 5px;
-      padding: 4px 7px;
-      font-size: 13px;
+      padding: 3px 6px;
+      font-size: 12px;
       width: 100%;
+      min-width: 50px;
       outline: none;
+      background: white;
+      color: var(--texto);
     }
 
-    /* ---- Márgenes ---- */
-    .margen-ok   { color: var(--verde); }
-    .margen-medio { color: var(--naranja); }
-    .margen-bajo  { color: var(--rojo); }
-    .margen-tag {
-      display: inline-block;
-      margin-left: 5px;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 1px 6px;
-      border-radius: 10px;
-      background: var(--gris-claro);
-    }
-
-    /* ---- Botones ---- */
+    /* ======================================================
+       BOTONES AUXILIARES
+    ====================================================== */
     .btn-naranja { background: var(--naranja); color: white; }
     .btn-rojo    { background: var(--rojo);    color: white; }
 
-    /* ---- Botones de especie ---- */
-    .filtros-especie {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
+    /* ======================================================
+       FILTROS ESPECIE
+    ====================================================== */
+    .filtros-especie { display: flex; gap: 7px; margin-top: 10px; flex-wrap: wrap; }
     .btn-especie {
-      padding: 8px 18px;
-      border-radius: 22px;
+      padding: 6px 14px;
+      border-radius: 20px;
       border: 2px solid var(--borde);
       background: white;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       transition: all .15s;
@@ -126,10 +152,15 @@
     .btn-especie.activo-perros { background: #2563eb; color: white; border-color: #2563eb; }
     .btn-especie.activo-gatos  { background: #7c3aed; color: white; border-color: #7c3aed; }
 
-    /* ---- Preview actualización ---- */
+    /* ======================================================
+       PREVIEW DE ACTUALIZACIÓN DE MARCA
+    ====================================================== */
     #upd-preview { max-height: 300px; overflow-y: auto; }
+    #upd-preview .tabla-precios { min-width: 0; }
 
-    /* ---- Previews de precio nuevo ---- */
+    /* ======================================================
+       PREVIEW DE PRECIOS (modal nuevo producto)
+    ====================================================== */
     .preview-precios {
       display: flex;
       gap: 16px;
@@ -141,76 +172,62 @@
     }
     .preview-precios span { font-weight: 700; color: var(--verde); }
 
-    .txt-gris { color: var(--gris); }
-
-    /* ---- Barra de selección múltiple (fija abajo) ---- */
+    /* ======================================================
+       BARRA SELECCIÓN MÚLTIPLE
+    ====================================================== */
     .barra-seleccion {
       position: fixed;
-      bottom: 0; left: 0; right: 0;
+      bottom: 62px; /* encima del nav mobile */
+      left: 0; right: 0;
       background: #1e293b;
       color: white;
-      padding: 14px 24px;
+      padding: 10px 16px;
       display: none;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      z-index: 1000;
-      box-shadow: 0 -3px 16px rgba(0,0,0,.3);
+      gap: 10px;
+      z-index: 300;
+      box-shadow: 0 -3px 16px rgba(0,0,0,.35);
       flex-wrap: wrap;
     }
     .barra-seleccion.visible { display: flex; }
-    .barra-seleccion .btn-outline {
-      color: white;
-      border-color: rgba(255,255,255,.5);
-    }
-    .barra-seleccion .btn-outline:hover {
-      background: rgba(255,255,255,.1);
-    }
-    #texto-seleccion { font-weight: 600; font-size: 15px; }
+    .barra-seleccion .btn-outline { color: white; border-color: rgba(255,255,255,.45); }
+    .barra-seleccion .btn-outline:hover { background: rgba(255,255,255,.1); }
+    #texto-seleccion { font-weight: 600; font-size: 14px; }
+    body { padding-bottom: 80px; }
 
-    /* Espacio inferior para que la barra no tape contenido */
-    body { padding-bottom: 70px; }
-
-    /* ---- Buscador hero ---- */
+    /* ======================================================
+       BUSCADOR HERO
+    ====================================================== */
     .buscador-hero {
       background: white;
-      border-radius: 14px;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.10);
-      padding: 14px 16px 14px;
-      margin-bottom: 16px;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.09);
+      padding: 12px 14px;
+      margin-bottom: 14px;
       border: 2px solid var(--verde);
     }
-    body.dark .buscador-hero {
-      background: #1e293b;
-      border-color: #2e7d32;
-    }
-    .buscador-hero-inner {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .buscador-icono {
-      font-size: 20px;
-      flex-shrink: 0;
-    }
+    body.dark .buscador-hero { background: #1e293b; border-color: #2e7d32; }
+    .buscador-hero-inner { display: flex; align-items: center; gap: 10px; }
+    .buscador-icono { font-size: 19px; flex-shrink: 0; }
     #buscador-p {
       flex: 1;
       border: none !important;
       outline: none !important;
       box-shadow: none !important;
-      font-size: 18px !important;
-      padding: 4px 0 !important;
+      font-size: 17px !important;
+      padding: 3px 0 !important;
       height: auto !important;
       border-radius: 0 !important;
       background: transparent !important;
       color: var(--texto);
     }
     body.dark #buscador-p { color: #f1f5f9; }
-    #buscador-p::placeholder { color: #aab; }
+    #buscador-p::placeholder { color: #9aa; }
     .buscador-limpiar {
       background: none;
       border: none;
-      font-size: 16px;
+      font-size: 15px;
       color: var(--gris);
       cursor: pointer;
       padding: 4px 6px;
@@ -218,6 +235,41 @@
       flex-shrink: 0;
     }
     .buscador-limpiar:hover { background: var(--gris-claro); }
+
+    /* ======================================================
+       DARK MODE
+    ====================================================== */
+    body.dark .bloque-marca { background: #1e293b; }
+    body.dark .marca-header { background: #162032; }
+    body.dark .marca-header:hover { background: #1a2a40; }
+    body.dark .tabla-precios thead th {
+      background: #0f172a;
+      color: #94a3b8;
+      border-bottom-color: #334155;
+    }
+    body.dark .tabla-precios tbody td { border-bottom-color: #1e293b; color: #e2e8f0; }
+    body.dark .tabla-precios tbody tr:hover { background: #263548; }
+    body.dark .fila-editando td { background: #1a2a10 !important; }
+    body.dark .input-inline { background: #0f172a; border-color: #334155; color: #f1f5f9; }
+    body.dark .preview-precios { background: #162032; }
+    body.dark .btn-especie { background: #1e293b; border-color: #334155; color: #f1f5f9; }
+    body.dark .btn-especie.activo-todos  { background: #0f172a; border-color: #4ade80; }
+    body.dark .btn-especie.activo-perros { background: #1e3a5f; border-color: #2563eb; }
+    body.dark .btn-especie.activo-gatos  { background: #3b1a5f; border-color: #7c3aed; }
+
+    /* ======================================================
+       INDICADOR DE SCROLL EN MOBILE
+    ====================================================== */
+    @media (max-width: 768px) {
+      .marca-contenido::after {
+        content: '';
+        display: block;
+        height: 2px;
+      }
+      /* Header de marca no wrappea botón en línea aparte */
+      .marca-header { padding: 10px 12px; }
+      .marca-header .btn-sm { font-size: 11px; padding: 4px 8px; }
+    }
   </style>
 </head>
 <body>
@@ -429,11 +481,11 @@
 <!-- ===== SCRIPTS ===== -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-<script src="js/firebase-config.js?v=7"></script>
-<script src="js/utils.js?v=7"></script>
-<script src="js/lista-precios.js?v=7"></script>
-<script src="js/importar-pdf.js?v=7"></script>
-<script src="js/nav-mobile.js?v=7"></script>
+<script src="js/firebase-config.js?v=9"></script>
+<script src="js/utils.js?v=9"></script>
+<script src="js/lista-precios.js?v=9"></script>
+<script src="js/importar-pdf.js?v=9"></script>
+<script src="js/nav-mobile.js?v=9"></script>
 
 <script>
   // ---- Filtro rápido de especie (botones) ----
