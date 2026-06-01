@@ -258,17 +258,80 @@
     body.dark .btn-especie.activo-gatos  { background: #3b1a5f; border-color: #7c3aed; }
 
     /* ======================================================
-       INDICADOR DE SCROLL EN MOBILE
+       MOBILE — Tarjetas en lugar de tabla
     ====================================================== */
     @media (max-width: 768px) {
-      .marca-contenido::after {
-        content: '';
-        display: block;
-        height: 2px;
+      /* El contenedor no necesita scroll horizontal */
+      .marca-contenido { overflow-x: visible; }
+
+      /* Quitar estructura de tabla */
+      .tabla-precios,
+      .tabla-precios tbody { display: block; width: 100%; }
+      .tabla-precios thead { display: none; }
+
+      /* Cada fila se convierte en tarjeta */
+      .tabla-precios tr {
+        display: flex;
+        flex-direction: column;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        margin: 6px 10px;
+        padding: 10px 12px;
       }
-      /* Header de marca no wrappea botón en línea aparte */
+      body.dark .tabla-precios tr {
+        background: #1e293b;
+        border-color: #334155;
+      }
+
+      /* Cada celda: etiqueta a la izquierda, valor a la derecha */
+      .tabla-precios td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 0;
+        border: none !important;
+        font-size: 13px;
+        white-space: normal;
+        min-height: 24px;
+      }
+      .tabla-precios td::before {
+        content: attr(data-label);
+        font-size: 10px;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: .4px;
+        flex-shrink: 0;
+        margin-right: 10px;
+        min-width: 70px;
+      }
+
+      /* Ocultar columnas menos relevantes en mobile */
+      .tabla-precios td.check-col { display: none; }
+      .tabla-precios td[data-label="% Min."],
+      .tabla-precios td[data-label="% May."],
+      .tabla-precios td[data-label="Costo"] { display: none; }
+
+      /* Acciones al final de la tarjeta */
+      .tabla-precios td.acciones {
+        display: flex;
+        justify-content: flex-end;
+        gap: 6px;
+        padding-top: 8px;
+        border-top: 1px solid #f1f5f9 !important;
+        margin-top: 4px;
+      }
+      body.dark .tabla-precios td.acciones { border-top-color: #334155 !important; }
+      .tabla-precios td.acciones::before { display: none; }
+
+      /* Header de marca compacto */
       .marca-header { padding: 10px 12px; }
       .marca-header .btn-sm { font-size: 11px; padding: 4px 8px; }
+
+      /* Inline editing en mobile → usar modal (ver JS) */
+      .fila-editando td::before { display: none; }
+      .fila-editando td { display: block; padding: 4px 0; }
     }
   </style>
 </head>
@@ -377,25 +440,25 @@
       </div>
 
       <div class="form-grupo">
-        <label>Costo ($) *</label>
-        <input type="number" id="np-costo" min="0" step="1" placeholder="0" required>
+        <label>Costo ($) <span style="color:var(--gris);font-size:12px">(opcional)</span></label>
+        <input type="number" id="np-costo" min="0" step="1" placeholder="0" oninput="calcularPreviewNuevo()">
       </div>
 
       <div class="form-fila">
         <div class="form-grupo">
-          <label>Margen minorista (%)</label>
-          <input type="number" id="np-margen-min" min="0" step="1" value="35" placeholder="35">
+          <label>Precio Minorista ($) *</label>
+          <input type="number" id="np-precio-min" min="0" step="1" placeholder="0" required oninput="calcularPreviewNuevo()">
         </div>
         <div class="form-grupo">
-          <label>Margen mayorista (%)</label>
-          <input type="number" id="np-margen-may" min="0" step="1" value="20" placeholder="20">
+          <label>Precio Mayorista ($)</label>
+          <input type="number" id="np-precio-may" min="0" step="1" placeholder="0" oninput="calcularPreviewNuevo()">
         </div>
       </div>
 
-      <!-- Preview de precios calculados -->
+      <!-- Indicador de márgenes (aparece si hay costo) -->
       <div class="preview-precios" id="np-preview-box" style="display:none">
-        <div>Minorista: <span id="np-preview-min">$0</span></div>
-        <div>Mayorista: <span id="np-preview-may">$0</span></div>
+        <div>Margen min: <span id="np-preview-min">0%</span></div>
+        <div>Margen may: <span id="np-preview-may">0%</span></div>
       </div>
 
       <div class="form-acciones" style="margin-top:16px">
@@ -436,6 +499,56 @@
   </div>
 </div>
 
+
+<!-- ===== MODAL: EDITAR PRECIO (mobile y desktop) ===== -->
+<div class="modal" id="modal-editar-precio">
+  <div class="modal-box" style="max-width:480px;overflow-y:auto;padding-bottom:90px">
+    <button class="cerrar-modal" onclick="cerrarModalEdicion()">×</button>
+    <h2>Editar producto</h2>
+    <p class="subtitulo" id="edit-precio-titulo"></p>
+    <div class="form-grupo">
+      <label>Nombre</label>
+      <input type="text" id="epm-nombre">
+    </div>
+    <div class="form-fila">
+      <div class="form-grupo">
+        <label>Especie</label>
+        <select id="epm-especie">
+          <option value="perros">🐶 Perros</option>
+          <option value="gatos">🐱 Gatos</option>
+          <option value="ambos">Ambos</option>
+        </select>
+      </div>
+      <div class="form-grupo">
+        <label>Peso / Unidad</label>
+        <input type="text" id="epm-peso" placeholder="Ej: 15 kg">
+      </div>
+    </div>
+    <div class="form-grupo">
+      <label>Costo ($) <span style="color:var(--gris);font-size:12px">(opcional)</span></label>
+      <input type="number" id="epm-costo" min="0" step="1" placeholder="0" oninput="recalcularModal()">
+    </div>
+    <div class="form-fila">
+      <div class="form-grupo">
+        <label>Precio Minorista ($)</label>
+        <input type="number" id="epm-precio-min" min="0" step="1" placeholder="0" oninput="recalcularModal()">
+      </div>
+      <div class="form-grupo">
+        <label>Precio Mayorista ($)</label>
+        <input type="number" id="epm-precio-may" min="0" step="1" placeholder="0" oninput="recalcularModal()">
+      </div>
+    </div>
+    <!-- Indicador de márgenes calculados -->
+    <div id="epm-margenes" style="display:none;gap:12px;font-size:13px;padding:8px 12px;background:var(--gris-claro);border-radius:8px;margin-bottom:12px;flex-wrap:wrap">
+      <span>Min: <strong id="epm-mrg-min">0%</strong></span>
+      <span>May: <strong id="epm-mrg-may">0%</strong></span>
+    </div>
+    <div class="form-acciones">
+      <button class="btn btn-outline" onclick="cerrarModalEdicion()">Cancelar</button>
+      <button class="btn btn-verde" onclick="guardarDesdeModal()">✓ Guardar</button>
+    </div>
+  </div>
+</div>
 
 <!-- ===== MODAL: CONFIRMAR ELIMINACIÓN INDIVIDUAL ===== -->
 <div class="modal" id="modal-confirmar-eliminar">

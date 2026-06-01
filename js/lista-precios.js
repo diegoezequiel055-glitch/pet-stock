@@ -224,9 +224,13 @@ async function agregarPrecio(e) {
   const btn = e.target.querySelector('button[type="submit"]');
   btn.disabled = true;
 
-  const costo    = parseFloat(document.getElementById('np-costo').value)    || 0;
-  const margenMi = parseFloat(document.getElementById('np-margen-min').value) || 0;
-  const margenMa = parseFloat(document.getElementById('np-margen-may').value) || 0;
+  const costo      = parseFloat(document.getElementById('np-costo').value)      || 0;
+  const precioMin  = parseFloat(document.getElementById('np-precio-min').value) || 0;
+  const precioMay  = parseFloat(document.getElementById('np-precio-may').value) || 0;
+  // Si se ingresa costo + margen, los precios ya vienen calculados en los campos.
+  // El margen se recalcula a la inversa si hay costo.
+  const margenMi   = costo > 0 && precioMin > 0 ? Math.round(((precioMin - costo) / costo) * 100) : 0;
+  const margenMa   = costo > 0 && precioMay > 0 ? Math.round(((precioMay - costo) / costo) * 100) : 0;
 
   const data = {
     nombre:           document.getElementById('np-nombre').value.trim(),
@@ -236,13 +240,18 @@ async function agregarPrecio(e) {
     costo,
     margenMinorista:  margenMi,
     margenMayorista:  margenMa,
-    precioMinorista:  Math.round(costo * (1 + margenMi / 100)),
-    precioMayorista:  Math.round(costo * (1 + margenMa / 100)),
+    precioMinorista:  precioMin,
+    precioMayorista:  precioMay,
     ultimaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
   };
 
   if (!data.nombre || !data.marca || !data.especie) {
     mostrarAlerta('Completá nombre, marca y especie', 'warning');
+    btn.disabled = false;
+    return;
+  }
+  if (data.precioMinorista <= 0) {
+    mostrarAlerta('Ingresá al menos el precio minorista', 'warning');
     btn.disabled = false;
     return;
   }
@@ -261,87 +270,100 @@ async function agregarPrecio(e) {
   }
 }
 
-// Previsualizar precios mientras escribís márgenes
+// Previsualizar márgenes mientras escribís los precios
 function calcularPreviewNuevo() {
-  const costo    = parseFloat(document.getElementById('np-costo').value) || 0;
-  const margenMi = parseFloat(document.getElementById('np-margen-min').value) || 0;
-  const margenMa = parseFloat(document.getElementById('np-margen-may').value) || 0;
-  document.getElementById('np-preview-min').textContent = formatPrecio(Math.round(costo * (1 + margenMi / 100)));
-  document.getElementById('np-preview-may').textContent = formatPrecio(Math.round(costo * (1 + margenMa / 100)));
+  const costo    = parseFloat(document.getElementById('np-costo').value)      || 0;
+  const precioMi = parseFloat(document.getElementById('np-precio-min').value) || 0;
+  const precioMa = parseFloat(document.getElementById('np-precio-may').value) || 0;
+  const box      = document.getElementById('np-preview-box');
+  if (!box) return;
+  if (costo > 0 && (precioMi > 0 || precioMa > 0)) {
+    box.style.display = 'flex';
+    const mMin = precioMi > 0 ? Math.round(((precioMi - costo) / costo) * 100) : 0;
+    const mMay = precioMa > 0 ? Math.round(((precioMa - costo) / costo) * 100) : 0;
+    document.getElementById('np-preview-min').textContent = mMin + '%';
+    document.getElementById('np-preview-may').textContent = mMay + '%';
+  } else {
+    box.style.display = 'none';
+  }
 }
 
 // =============================================
-// EDICIÓN INLINE DE UN PRODUCTO
+// EDICIÓN — detecta mobile vs desktop
 // =============================================
 function abrirEdicionInline(id) {
-  // Si había otra fila en edición, la cerramos sin guardar
-  if (precioEditId && precioEditId !== id) cerrarEdicionInline(precioEditId);
+  // En mobile (< 769px) → modal limpio
+  if (window.innerWidth < 769) {
+    abrirModalEdicionMobile(id);
+    return;
+  }
 
+  // Desktop → edición inline en la fila
+  if (precioEditId && precioEditId !== id) cerrarEdicionInline(precioEditId);
   precioEditId = id;
   const p = preciosCache.find(x => x.id === id);
   if (!p) return;
 
-  const fila = document.getElementById(`fila-${id}`);
+  const fila = document.getElementById('fila-' + id);
   fila.classList.add('fila-editando');
-  fila.innerHTML = `
-    <td class="check-col"></td>
-    <td><input class="input-inline" id="ei-nombre" value="${p.nombre}"></td>
-    <td>
-      <select class="input-inline" id="ei-especie">
-        <option value="perros" ${p.especie==='perros'?'selected':''}>🐶 Perros</option>
-        <option value="gatos"  ${p.especie==='gatos'?'selected':''}>🐱 Gatos</option>
-        <option value="ambos"  ${p.especie==='ambos'?'selected':''}>Ambos</option>
-      </select>
-    </td>
-    <td><input class="input-inline" id="ei-peso" value="${p.unidadPeso || ''}" style="width:70px"></td>
-    <td><input class="input-inline" id="ei-costo" type="number" value="${p.costo}" oninput="recalcularInline()"></td>
-    <td id="ei-preview-min-precio">${formatPrecio(p.precioMinorista)}</td>
-    <td>
-      <small>Margen: <input class="input-inline" id="ei-margen-min" type="number"
-        value="${p.margenMinorista || 0}" style="width:52px" oninput="recalcularInline()">%</small>
-    </td>
-    <td id="ei-preview-may-precio">${formatPrecio(p.precioMayorista)}</td>
-    <td>
-      <small>Margen: <input class="input-inline" id="ei-margen-may" type="number"
-        value="${p.margenMayorista || 0}" style="width:52px" oninput="recalcularInline()">%</small>
-    </td>
-    <td class="acciones">
-      <button class="btn btn-sm btn-verde" onclick="guardarEdicionInline('${id}')">✓ Guardar</button>
-      <button class="btn btn-sm btn-outline" onclick="cerrarEdicionInline('${id}')">✕</button>
-    </td>`;
+  fila.innerHTML =
+    '<td class="check-col"></td>' +
+    '<td><input class="input-inline" id="ei-nombre" value="' + p.nombre.replace(/"/g,'&quot;') + '" style="min-width:120px"></td>' +
+    '<td><select class="input-inline" id="ei-especie">' +
+      '<option value="perros"' + (p.especie==='perros'?' selected':'') + '>🐶 Perros</option>' +
+      '<option value="gatos"'  + (p.especie==='gatos' ?' selected':'') + '>🐱 Gatos</option>'  +
+      '<option value="ambos"'  + (p.especie==='ambos' ?' selected':'') + '>Ambos</option>'  +
+    '</select></td>' +
+    '<td><input class="input-inline" id="ei-peso" value="' + (p.unidadPeso||'') + '" style="width:60px"></td>' +
+    '<td><input class="input-inline" id="ei-costo" type="number" value="' + (p.costo||0) + '" oninput="recalcularInline()" style="width:80px"></td>' +
+    '<td><input class="input-inline" id="ei-precio-min" type="number" value="' + (p.precioMinorista||0) + '" oninput="recalcularInline()" style="width:85px"></td>' +
+    '<td id="ei-mrg-min" class="margen-ok" style="font-size:12px;white-space:nowrap"></td>' +
+    '<td><input class="input-inline" id="ei-precio-may" type="number" value="' + (p.precioMayorista||0) + '" oninput="recalcularInline()" style="width:85px"></td>' +
+    '<td id="ei-mrg-may" class="margen-ok" style="font-size:12px;white-space:nowrap"></td>' +
+    '<td class="acciones">' +
+      '<button class="btn btn-sm btn-verde" onclick="guardarEdicionInline(\'' + id + '\')">✓</button>' +
+      '<button class="btn btn-sm btn-outline" onclick="cerrarEdicionInline(\'' + id + '\')">✕</button>' +
+    '</td>';
 
   recalcularInline();
 }
 
 function recalcularInline() {
-  const costo    = parseFloat(document.getElementById('ei-costo')?.value) || 0;
-  const margenMi = parseFloat(document.getElementById('ei-margen-min')?.value) || 0;
-  const margenMa = parseFloat(document.getElementById('ei-margen-may')?.value) || 0;
+  const costo    = parseFloat(document.getElementById('ei-costo')?.value)     || 0;
+  const precioMi = parseFloat(document.getElementById('ei-precio-min')?.value) || 0;
+  const precioMa = parseFloat(document.getElementById('ei-precio-may')?.value) || 0;
 
-  const nuevoMin = Math.round(costo * (1 + margenMi / 100));
-  const nuevoMay = Math.round(costo * (1 + margenMa / 100));
+  const mrgMin = costo > 0 && precioMi > 0 ? Math.round(((precioMi - costo) / costo) * 100) : null;
+  const mrgMay = costo > 0 && precioMa > 0 ? Math.round(((precioMa - costo) / costo) * 100) : null;
 
-  const previewMin = document.getElementById('ei-preview-min-precio');
-  if (previewMin) previewMin.textContent = formatPrecio(nuevoMin);
-
-  const previewMay = document.getElementById('ei-preview-may-precio');
-  if (previewMay) previewMay.textContent = formatPrecio(nuevoMay);
+  const elMin = document.getElementById('ei-mrg-min');
+  const elMay = document.getElementById('ei-mrg-may');
+  if (elMin) {
+    elMin.textContent = mrgMin !== null ? mrgMin + '%' : '';
+    elMin.className = mrgMin === null ? '' : mrgMin < 20 ? 'margen-bajo' : mrgMin < 40 ? 'margen-medio' : 'margen-ok';
+  }
+  if (elMay) {
+    elMay.textContent = mrgMay !== null ? mrgMay + '%' : '';
+    elMay.className = mrgMay === null ? '' : mrgMay < 20 ? 'margen-bajo' : mrgMay < 40 ? 'margen-medio' : 'margen-ok';
+  }
 }
 
 async function guardarEdicionInline(id) {
-  const costo    = parseFloat(document.getElementById('ei-costo').value)     || 0;
-  const margenMi = parseFloat(document.getElementById('ei-margen-min').value) || 0;
-  const margenMa = parseFloat(document.getElementById('ei-margen-may').value) || 0;
+  const costo      = parseFloat(document.getElementById('ei-costo').value)     || 0;
+  const precioMin  = parseFloat(document.getElementById('ei-precio-min').value) || 0;
+  const precioMay  = parseFloat(document.getElementById('ei-precio-may').value) || 0;
+  const margenMi   = costo > 0 && precioMin > 0 ? Math.round(((precioMin - costo) / costo) * 100) : 0;
+  const margenMa   = costo > 0 && precioMay > 0 ? Math.round(((precioMay - costo) / costo) * 100) : 0;
 
   const updates = {
     nombre:           document.getElementById('ei-nombre').value.trim(),
     especie:          document.getElementById('ei-especie').value,
     unidadPeso:       document.getElementById('ei-peso').value.trim(),
     costo,
+    precioMinorista:  precioMin,
+    precioMayorista:  precioMay,
     margenMinorista:  margenMi,
     margenMayorista:  margenMa,
-    precioMinorista:  Math.round(costo * (1 + margenMi / 100)),
-    precioMayorista:  Math.round(costo * (1 + margenMa / 100)),
     ultimaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
   };
 
@@ -359,6 +381,85 @@ async function guardarEdicionInline(id) {
 function cerrarEdicionInline(id) {
   precioEditId = '';
   cargarPrecios();
+}
+
+// =============================================
+// EDICIÓN MODAL (mobile o cuando se requiere)
+// =============================================
+let _editModalId = '';
+
+function abrirModalEdicionMobile(id) {
+  _editModalId = id;
+  const p = preciosCache.find(x => x.id === id);
+  if (!p) return;
+
+  document.getElementById('edit-precio-titulo').textContent = p.marca + ' — ' + p.nombre;
+  document.getElementById('epm-nombre').value     = p.nombre;
+  document.getElementById('epm-especie').value    = p.especie;
+  document.getElementById('epm-peso').value       = p.unidadPeso || '';
+  document.getElementById('epm-costo').value      = p.costo || '';
+  document.getElementById('epm-precio-min').value = p.precioMinorista || '';
+  document.getElementById('epm-precio-may').value = p.precioMayorista || '';
+  recalcularModal();
+  abrirModal('modal-editar-precio');
+}
+
+function recalcularModal() {
+  const costo    = parseFloat(document.getElementById('epm-costo')?.value)      || 0;
+  const precioMi = parseFloat(document.getElementById('epm-precio-min')?.value) || 0;
+  const precioMa = parseFloat(document.getElementById('epm-precio-may')?.value) || 0;
+
+  const mMin = costo > 0 && precioMi > 0 ? Math.round(((precioMi - costo) / costo) * 100) : null;
+  const mMay = costo > 0 && precioMa > 0 ? Math.round(((precioMa - costo) / costo) * 100) : null;
+
+  const box = document.getElementById('epm-margenes');
+  if (box) {
+    box.style.display = (mMin !== null || mMay !== null) ? 'flex' : 'none';
+    const elMin = document.getElementById('epm-mrg-min');
+    const elMay = document.getElementById('epm-mrg-may');
+    if (elMin) { elMin.textContent = mMin !== null ? mMin + '%' : '—'; elMin.className = mMin === null ? '' : mMin < 20 ? 'margen-bajo' : mMin < 40 ? 'margen-medio' : 'margen-ok'; }
+    if (elMay) { elMay.textContent = mMay !== null ? mMay + '%' : '—'; elMay.className = mMay === null ? '' : mMay < 20 ? 'margen-bajo' : mMay < 40 ? 'margen-medio' : 'margen-ok'; }
+  }
+}
+
+async function guardarDesdeModal() {
+  const id = _editModalId;
+  if (!id) return;
+  const costo     = parseFloat(document.getElementById('epm-costo').value)      || 0;
+  const precioMin = parseFloat(document.getElementById('epm-precio-min').value) || 0;
+  const precioMay = parseFloat(document.getElementById('epm-precio-may').value) || 0;
+  const margenMi  = costo > 0 && precioMin > 0 ? Math.round(((precioMin - costo) / costo) * 100) : 0;
+  const margenMa  = costo > 0 && precioMay > 0 ? Math.round(((precioMay - costo) / costo) * 100) : 0;
+
+  const updates = {
+    nombre:          document.getElementById('epm-nombre').value.trim(),
+    especie:         document.getElementById('epm-especie').value,
+    unidadPeso:      document.getElementById('epm-peso').value.trim(),
+    costo,
+    precioMinorista: precioMin,
+    precioMayorista: precioMay,
+    margenMinorista: margenMi,
+    margenMayorista: margenMa,
+    ultimaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  if (!updates.nombre) { mostrarAlerta('El nombre no puede estar vacío', 'warning'); return; }
+  if (precioMin <= 0)   { mostrarAlerta('Ingresá un precio minorista válido', 'warning'); return; }
+
+  try {
+    await db.collection('precios').doc(id).update(updates);
+    mostrarAlerta('Precios actualizados', 'success');
+    cerrarModalEdicion();
+    cargarPrecios();
+  } catch (err) {
+    console.error(err);
+    mostrarAlerta('Error al guardar', 'error');
+  }
+}
+
+function cerrarModalEdicion() {
+  _editModalId = '';
+  cerrarModal('modal-editar-precio');
 }
 
 // =============================================
@@ -551,11 +652,16 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('buscador-p')?.addEventListener('input', filtrarPrecios);
   document.getElementById('filtro-especie-p')?.addEventListener('change', filtrarPrecios);
 
-  // Preview de cálculo en modal nuevo producto
-  ['np-costo','np-margen-min','np-margen-may'].forEach(id => {
+  // Preview de márgenes en modal nuevo producto
+  ['np-costo','np-precio-min','np-precio-may'].forEach(function(id) {
     document.getElementById(id)?.addEventListener('input', calcularPreviewNuevo);
   });
 
   // Preview de actualización de marca
   document.getElementById('upd-porcentaje')?.addEventListener('input', previewActualizarMarca);
+
+  // Campos del modal edición mobile
+  ['epm-costo','epm-precio-min','epm-precio-may'].forEach(function(id) {
+    document.getElementById(id)?.addEventListener('input', recalcularModal);
+  });
 });

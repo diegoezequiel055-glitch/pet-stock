@@ -17,15 +17,19 @@ let productoSeleccionadoId = ''; // ID del producto activo en modales
 // CARGAR Y MOSTRAR PRODUCTOS
 // =============================================
 async function cargarProductos() {
+  var contenedor = document.getElementById('tbody-productos');
   try {
-    const snap = await db.collection('productos')
-      .orderBy('marca')
-      .get();
-
-    productosCache = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    // Sin orderBy para evitar requerir índice compuesto de Firestore
+    var snap = await db.collection('productos').get();
+    productosCache = snap.docs.map(function(doc) { return Object.assign({ id: doc.id }, doc.data()); });
+    // Ordenar por marca en el cliente
+    productosCache.sort(function(a, b) { return (a.marca || '').localeCompare(b.marca || ''); });
     renderTablaProductos(productosCache);
   } catch (err) {
-    console.error(err);
+    console.error('Error cargarProductos:', err);
+    if (contenedor) {
+      contenedor.innerHTML = '<p style="color:#ef4444;text-align:center;padding:24px">⚠️ Error al cargar: ' + (err.message || err.code || 'revisá tu conexión') + '</p>';
+    }
     mostrarAlerta('Error al cargar productos', 'error');
   }
 }
@@ -393,9 +397,6 @@ function filtrarProductos() {
 }
 
 // =============================================
-// INIT
-// =============================================
-// =============================================
 // EDITAR PRODUCTO
 // =============================================
 function abrirModalEditarProducto(id) {
@@ -451,9 +452,18 @@ async function eliminarProducto(id, nombre) {
 // =============================================
 // INIT
 // =============================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
   cargarProductos();
-  document.getElementById('form-producto')?.addEventListener('submit', agregarProducto);
-  document.getElementById('form-lote')?.addEventListener('submit', agregarLote);
-  document.getElementById('form-editar-producto')?.addEventListener('submit', guardarEdicionProducto);
+
+  var fp = document.getElementById('form-producto');
+  var fl = document.getElementById('form-lote');
+  var fe = document.getElementById('form-editar-producto');
+  var bus = document.getElementById('buscador');
+  var filt = document.getElementById('filtro-especie');
+
+  if (fp)   fp.addEventListener('submit', agregarProducto);
+  if (fl)   fl.addEventListener('submit', agregarLote);
+  if (fe)   fe.addEventListener('submit', guardarEdicionProducto);
+  if (bus)  bus.addEventListener('input', filtrarProductos);
+  if (filt) filt.addEventListener('change', filtrarProductos);
 });
