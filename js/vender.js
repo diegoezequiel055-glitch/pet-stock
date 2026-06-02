@@ -11,14 +11,7 @@
 let catalogoLocal = [];
 let carrito       = [];
 
-// -----------------------------------------------------------
-// INICIALIZACIÓN
-// -----------------------------------------------------------
-document.addEventListener('DOMContentLoaded', async () => {
-  inicializarBuscador();
-  renderCarrito();
-  await cargarCatalogo();
-});
+// Init al final del archivo
 
 // -----------------------------------------------------------
 // FASE 2.1 — CARGA DEL CATÁLOGO DESDE FIRESTORE
@@ -27,10 +20,10 @@ async function cargarCatalogo() {
   try {
     mostrarEstadoCarga(true);
 
-    const [snapProductos, snapPrecios, snapAccesorios] = await Promise.all([
-      db.collection('productos').orderBy('marca').get(),
-      db.collection('precios').get(),
-      db.collection('accesorios').get()
+    // Solo bolsas — sin orderBy para no requerir índice Firestore
+    const [snapProductos, snapPrecios] = await Promise.all([
+      db.collection('productos').get(),
+      db.collection('precios').get()
     ]);
 
     // Mapa de precios para bolsas (clave = "marca|nombre|peso" normalizado)
@@ -60,49 +53,9 @@ async function cargarCatalogo() {
       };
     });
 
-    // ── Accesorios + variantes ───────────────────────────────
-    const accItems = [];
-    for (const doc of snapAccesorios.docs) {
-      const d = { id: doc.id, ...doc.data() };
-      if (d.tieneVariantes) {
-        const varSnap = await db.collection('accesorios')
-          .doc(doc.id).collection('variantes').get();
-        varSnap.docs.forEach(vDoc => {
-          const v = vDoc.data();
-          accItems.push({
-            id:             vDoc.id,
-            padreId:        doc.id,
-            tipo:           'accesorio',
-            nombre:         `${d.nombre} — ${v.nombre_variante || ''}`,
-            detalle:        [d.marca, CATEGORIAS_LABEL[d.categoria] || d.categoria].filter(Boolean).join(' · '),
-            stock:          v.stock || 0,
-            costo:          v.costo || 0,
-            precioVenta:    v.precioVenta || 0,
-            precioEditable: false,
-            _esVariante:    true,
-            _busqueda:      normalizar(`${d.nombre} ${v.nombre_variante || ''} ${d.marca || ''} ${d.categoria || ''}`)
-          });
-        });
-      } else {
-        accItems.push({
-          id:             doc.id,
-          padreId:        null,
-          tipo:           'accesorio',
-          nombre:         d.nombre,
-          detalle:        [d.marca, CATEGORIAS_LABEL[d.categoria] || d.categoria].filter(Boolean).join(' · '),
-          stock:          d.stock || 0,
-          costo:          d.costo || 0,
-          precioVenta:    d.precioVenta || 0,
-          precioEditable: false,
-          _esVariante:    false,
-          _busqueda:      normalizar(`${d.nombre} ${d.marca || ''} ${d.categoria || ''}`)
-        });
-      }
-    }
-
-    catalogoLocal = [...bolsas, ...accItems];
+    catalogoLocal = [...bolsas];
     mostrarEstadoCarga(false);
-    console.log(`Catálogo: ${bolsas.length} bolsas, ${accItems.length} accesorios/variantes`);
+    console.log(`Catálogo: ${bolsas.length} bolsas`);
 
   } catch (err) {
     console.error('Error cargando catálogo:', err);
@@ -367,24 +320,6 @@ async function confirmarVenta() {
       };
     });
 
-    // ── PASO 3: Armar items para accesorios ─────────────────────────────────
-    const operacionesAcc = carrito
-      .filter(item => item.tipo === 'accesorio')
-      .map(item => {
-        const ref = item._esVariante
-          ? db.collection('accesorios').doc(item.padreId).collection('variantes').doc(item.id)
-          : db.collection('accesorios').doc(item.id);
-
-        const costoTotal = (item.costo || 0) * item.cantidad;
-        return {
-          item,
-          ref,
-          costoTotal,
-          totalVenta: item.precioVenta * item.cantidad,
-          ganancia:   (item.precioVenta * item.cantidad) - costoTotal
-        };
-      });
-
     // ── PASO 4: WriteBatch — todas las escrituras atómicas ──────────────────
     const batch = db.batch();
 
@@ -398,15 +333,8 @@ async function confirmarVenta() {
       });
     }
 
-    // 4b. Descontar stock de accesorios (simples o variantes)
-    for (const op of operacionesAcc) {
-      batch.update(op.ref, {
-        stock: firebase.firestore.FieldValue.increment(-op.item.cantidad)
-      });
-    }
-
-    // 4c. Calcular totales globales de la venta
-    const todasLasOps   = [...operacionesBolsas, ...operacionesAcc];
+    // 4b. Calcular totales globales de la venta (solo bolsas)
+    const todasLasOps   = [...operacionesBolsas];
     const totalVenta    = todasLasOps.reduce((s, op) => s + op.totalVenta, 0);
     const costoTotal    = todasLasOps.reduce((s, op) => s + (op.costoFIFO ?? op.costoTotal ?? 0), 0);
     const gananciaTotal = todasLasOps.reduce((s, op) => s + op.ganancia, 0);
@@ -440,11 +368,6 @@ async function confirmarVenta() {
       const enCatalogo = catalogoLocal.find(p => p.id === op.item.id);
       if (enCatalogo) enCatalogo.stock -= op.item.cantidad;
     }
-    for (const op of operacionesAcc) {
-      const enCatalogo = catalogoLocal.find(p => p.id === op.item.id);
-      if (enCatalogo) enCatalogo.stock -= op.item.cantidad;
-    }
-
     carrito = [];
     renderCarrito();
     mostrarToast(`✅ Venta confirmada — Ganancia: ${formatPrecioLocal(gananciaTotal)}`);
@@ -472,6 +395,7 @@ function toggleCierre() {
 async function guardarCierrePetShop() {
   const monto = parseFloat(document.getElementById('input-cierre-monto').value);
   const notas = (document.getElementById('input-cierre-notas')?.value || '').trim();
+  const tipo  = document.getElementById('select-cierre-tipo')?.value || 'cierre';
 
   if (isNaN(monto) || monto < 0) {
     mostrarToast('⚠️ Ingresá un monto válido');
@@ -486,13 +410,15 @@ async function guardarCierrePetShop() {
     const ahora = new Date();
     await db.collection('caja_petshop').add({
       fecha:     firebase.firestore.FieldValue.serverTimestamp(),
-      fechaISO:  ahora.toISOString().slice(0, 10),   // "YYYY-MM-DD" para filtrar por día
+      fechaISO:  ahora.toISOString().slice(0, 10),
       monto,
       notas:     notas || '',
+      tipo,
       origen:    'cierre_diario'
     });
 
-    mostrarToast(`✅ Cierre guardado: ${formatPrecioLocal(monto)}`);
+    const tipoLabel = { accesorios: 'Accesorios', farmacia: 'Farmacia', cierre: 'Cierre diario', otro: 'Otro' };
+    mostrarToast(`✅ ${tipoLabel[tipo] || tipo}: ${formatPrecioLocal(monto)}`);
     document.getElementById('input-cierre-monto').value = '';
     if (document.getElementById('input-cierre-notas')) {
       document.getElementById('input-cierre-notas').value = '';
@@ -532,15 +458,17 @@ async function cargarResumenCierrePetShop() {
     document.getElementById('cierre-total-hoy').textContent =
       `Total hoy: ${formatPrecioLocal(totalHoy)}`;
 
+    const TIPO_LABEL = { accesorios: '🧸 Accesorios', farmacia: '💊 Farmacia', cierre: '🏪 Cierre', otro: '📦 Otro' };
     contenedor.innerHTML = registros.map(r => {
       const hora = r.fecha?.toDate
         ? r.fecha.toDate().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
         : '--:--';
+      const tipoTag = r.tipo ? `<span style="background:#f1f5f9;color:#475569;font-size:11px;font-weight:700;padding:1px 7px;border-radius:8px;margin-right:5px">${TIPO_LABEL[r.tipo] || r.tipo}</span>` : '';
       return `
         <div style="display:flex;justify-content:space-between;align-items:center;
                     padding:7px 0;border-bottom:1px solid #f1f5f9;font-size:13px;">
           <div>
-            <span style="color:#64748b">${hora}</span>
+            ${tipoTag}<span style="color:#64748b">${hora}</span>
             ${r.notas ? `<span style="color:#94a3b8;margin-left:6px">· ${r.notas}</span>` : ''}
           </div>
           <div style="display:flex;align-items:center;gap:10px">
@@ -589,4 +517,19 @@ function mostrarToast(msg) {
   t.classList.add('visible');
   setTimeout(() => t.classList.remove('visible'), 3000);
 }
-                                                                                                                                                      
+
+// -----------------------------------------------------------
+// INICIALIZACIÓN — al final para que todas las funciones estén definidas
+// -----------------------------------------------------------
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function() {
+    inicializarBuscador();
+    renderCarrito();
+    cargarCatalogo();
+  });
+} else {
+  inicializarBuscador();
+  renderCarrito();
+  cargarCatalogo();
+}
+                               
