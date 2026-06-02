@@ -803,6 +803,11 @@ body.dark .toggle-tema { background: #334155; }
 
   /* === ALERTA global: más arriba del nav === */
   #alerta-global {
+    bottom: 90px;
+  }
+
+} /* fin @media (max-width: 768px) */
+
 /* =============================================
    CARDS COMPACTAS — Bolsas y Accesorios
    ============================================= */
@@ -893,6 +898,4 @@ body.dark .card-variante { border-left-color: #475569; }
 
 /* Desktop: grid de 2 columnas */
 @media (min-width: 769px) {
-  .lista-cards {
-    display: grid;
-    grid-template-columns: repe
+  
