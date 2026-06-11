@@ -550,7 +550,7 @@ async function eliminarSimple(id, nombre) {
 // =============================================
 // INIT
 // =============================================
-document.addEventListener('DOMContentLoaded', function() {
+function _initAccesorios() {
   cargarAccesorios();
   var formNuevo  = document.getElementById('form-acc-nuevo');
   var formEditar = document.getElementById('form-editar-acc');
@@ -558,4 +558,9 @@ document.addEventListener('DOMContentLoaded', function() {
   if (formNuevo)  formNuevo.addEventListener('submit',  agregarAccesorio);
   if (formEditar) formEditar.addEventListener('submit', guardarEdicionAcc);
   if (formSumar)  formSumar.addEventListener('submit',  sumarStock);
-});
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _initAccesorios);
+} else {
+  _initAccesorios();
+}
