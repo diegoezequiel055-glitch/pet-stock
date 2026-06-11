@@ -143,7 +143,7 @@ function aplicarFiltros() {
 
   renderTablaVentas(filtradas);
   renderResumen(filtradas, filtradaCaja);
-  renderCierresDiarios(filtradaCaja);
+  renderCierresDiarios(filtradaCaja, filtradas);
 
   var cont = document.getElementById('contador-ventas');
   if (cont) cont.textContent = filtradas.length + ' resultado' + (filtradas.length !== 1 ? 's' : '');
@@ -310,53 +310,96 @@ function toggleDiaVentas(header) {
 // =============================================
 // RENDER CIERRES DIARIOS
 // =============================================
-function renderCierresDiarios(cajaFiltrada) {
+function renderCierresDiarios(cajaFiltrada, ventasFiltradas) {
   var contenedor = document.getElementById('lista-cierres-dias');
   if (!contenedor) return;
 
-  if (cajaFiltrada.length === 0) {
-    contenedor.innerHTML = '<div style="padding:24px;text-align:center;color:#64748b;font-size:14px">Sin registros en el período</div>';
-    return;
-  }
+  ventasFiltradas = ventasFiltradas || [];
 
+  // Ventas nuevas de accesorios/farmacia (desde carrito acc)
+  var ventasAccFarm = ventasFiltradas.filter(function(v) {
+    return v.tipo === 'accesorio' || v.tipo === 'farmacia';
+  });
+
+  // Agrupar por día
   var porDia = {};
+
   cajaFiltrada.forEach(function(r) {
     var iso = r.fechaISO || (r.fecha && r.fecha.toDate ? r.fecha.toDate().toISOString().slice(0, 10) : '');
     if (!iso) return;
-    if (!porDia[iso]) porDia[iso] = [];
-    porDia[iso].push(r);
+    if (!porDia[iso]) porDia[iso] = { caja: [], ventas: [] };
+    porDia[iso].caja.push(r);
   });
+
+  ventasAccFarm.forEach(function(v) {
+    var fecha = v.fecha && v.fecha.toDate ? v.fecha.toDate() : (v.fecha ? new Date(v.fecha) : null);
+    if (!fecha) return;
+    var iso = fecha.toISOString().slice(0, 10);
+    if (!porDia[iso]) porDia[iso] = { caja: [], ventas: [] };
+    porDia[iso].ventas.push(v);
+  });
+
+  if (Object.keys(porDia).length === 0) {
+    contenedor.innerHTML = '<div style="padding:24px;text-align:center;color:#64748b;font-size:14px">Sin registros en el período</div>';
+    return;
+  }
 
   var dias = Object.keys(porDia).sort().reverse();
   var html = '';
 
   dias.forEach(function(diaISO, idx) {
-    var items    = porDia[diaISO];
-    var abierto  = idx === 0;
+    var grupo   = porDia[diaISO];
+    var abierto = idx === 0;
 
-    var accesorios = items.filter(function(r) { return r.tipo === 'accesorios'; });
-    var farmacia   = items.filter(function(r) { return r.tipo === 'farmacia'; });
-    var cierres    = items.filter(function(r) { return r.tipo === 'cierre' || r.tipo === 'otro'; });
+    var cajaItems   = grupo.caja   || [];
+    var ventasItems = grupo.ventas || [];
 
-    var totalAcc  = accesorios.reduce(function(s, r) { return s + r.monto; }, 0);
-    var totalFarm = farmacia.reduce(function(s, r) { return s + r.monto; }, 0);
-    var totalCier = cierres.reduce(function(s, r) { return s + r.monto; }, 0);
-    var totalDia  = items.reduce(function(s, r) { return s + r.monto; }, 0);
+    // Datos desde caja_petshop (datos antiguos + cierre alimento suelto)
+    var accCaja   = cajaItems.filter(function(r) { return r.tipo === 'accesorios'; });
+    var farmCaja  = cajaItems.filter(function(r) { return r.tipo === 'farmacia'; });
+    var cierres   = cajaItems.filter(function(r) { return r.tipo === 'cierre' || r.tipo === 'otro'; });
 
-    var ganAcc   = totalAcc  * 1.00;
-    var ganFarm  = totalFarm * 0.60;
-    var ganCier  = totalCier * 0.40;
-    var ganTotal = ganAcc + ganFarm + ganCier;
+    var totalAccCaja  = accCaja.reduce(function(s, r)  { return s + r.monto; }, 0);
+    var totalFarmCaja = farmCaja.reduce(function(s, r)  { return s + r.monto; }, 0);
+    var totalCier     = cierres.reduce(function(s, r)   { return s + r.monto; }, 0);
+
+    // Datos nuevos desde ventas (carrito acc)
+    var accVen    = ventasItems.filter(function(v) { return v.tipo === 'accesorio'; });
+    var farmVen   = ventasItems.filter(function(v) { return v.tipo === 'farmacia'; });
+
+    var totalAccVen   = accVen.reduce(function(s, v)  { return s + (v.totalVenta || v.total || 0); }, 0);
+    var totalFarmVen  = farmVen.reduce(function(s, v)  { return s + (v.totalVenta || v.total || 0); }, 0);
+    var ganAccVen     = accVen.reduce(function(s, v)  { return s + (v.ganancia || 0); }, 0);
+    var ganFarmVen    = farmVen.reduce(function(s, v)  { return s + (v.ganancia || 0); }, 0);
+
+    // Ganancias
+    var ganAccCaja  = totalAccCaja  * 1.00;
+    var ganFarmCaja = totalFarmCaja * 0.60;
+    var ganCier     = totalCier     * 0.40;
+    var ganTotal    = ganAccCaja + ganFarmCaja + ganCier + ganAccVen + ganFarmVen;
+
+    var totalDia = totalAccCaja + totalFarmCaja + totalCier + totalAccVen + totalFarmVen;
+    if (totalDia === 0) return;
 
     var partes   = diaISO.split('-');
     var diaLabel = partes[2] + '/' + partes[1] + '/' + partes[0];
 
-    function renderItemsLista(lista) {
-      if (lista.length === 0) return '<div style="font-size:12px;color:#475569;padding:4px 0">Sin registros</div>';
+    function renderItemsCaja(lista) {
+      if (lista.length === 0) return '';
       return lista.map(function(r) {
         return '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #1e3a5f">' +
           '<span style="color:#94a3b8">' + (r.notas || '—') + '</span>' +
           '<span style="color:#e2e8f0;font-weight:600">' + formatPrecio(r.monto) + '</span>' +
+        '</div>';
+      }).join('');
+    }
+
+    function renderItemsVenta(lista) {
+      if (lista.length === 0) return '';
+      return lista.map(function(v) {
+        return '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #1e3a5f">' +
+          '<span style="color:#94a3b8">' + (v.nombreProducto || v.nombre || '—') + ' × ' + v.cantidad + '</span>' +
+          '<span style="color:#e2e8f0;font-weight:600">' + formatPrecio(v.totalVenta || v.total || 0) + '</span>' +
         '</div>';
       }).join('');
     }
@@ -377,118 +420,40 @@ function renderCierresDiarios(cajaFiltrada) {
     html += '<div style="display:' + (abierto ? 'block' : 'none') + ';' +
       'background:#0d1625;border:1px solid #334155;border-top:none;border-radius:0 0 10px 10px;padding:12px 14px">';
 
-    if (accesorios.length > 0) {
+    // Accesorios (nuevo carrito)
+    if (accVen.length > 0) {
       html += '<div style="font-size:12px;font-weight:700;color:#a78bfa;margin-bottom:4px">🧸 Accesorios</div>';
-      html += renderItemsLista(accesorios);
-      html += '<div style="font-size:12px;text-align:right;color:#e2e8f0;font-weight:700;padding-top:4px;margin-bottom:10px">Subtotal: ' + formatPrecio(totalAcc) + '</div>';
+      html += renderItemsVenta(accVen);
+      html += '<div style="font-size:12px;text-align:right;color:#e2e8f0;font-weight:700;padding-top:4px;margin-bottom:10px">Subtotal: ' + formatPrecio(totalAccVen) + ' · G: ' + formatPrecio(ganAccVen) + '</div>';
     }
-    if (farmacia.length > 0) {
+    // Accesorios (datos viejos de caja)
+    if (accCaja.length > 0) {
+      html += '<div style="font-size:12px;font-weight:700;color:#a78bfa;margin-bottom:4px">🧸 Accesorios (anterior)</div>';
+      html += renderItemsCaja(accCaja);
+      html += '<div style="font-size:12px;text-align:right;color:#e2e8f0;font-weight:700;padding-top:4px;margin-bottom:10px">Subtotal: ' + formatPrecio(totalAccCaja) + '</div>';
+    }
+    // Farmacia (nuevo carrito)
+    if (farmVen.length > 0) {
       html += '<div style="font-size:12px;font-weight:700;color:#67e8f9;margin-bottom:4px">💊 Farmacia</div>';
-      html += renderItemsLista(farmacia);
-      html += '<div style="font-size:12px;text-align:right;color:#e2e8f0;font-weight:700;padding-top:4px;margin-bottom:10px">Subtotal: ' + formatPrecio(totalFarm) + '</div>';
+      html += renderItemsVenta(farmVen);
+      html += '<div style="font-size:12px;text-align:right;color:#e2e8f0;font-weight:700;padding-top:4px;margin-bottom:10px">Subtotal: ' + formatPrecio(totalFarmVen) + ' · G: ' + formatPrecio(ganFarmVen) + '</div>';
     }
+    // Farmacia (datos viejos de caja)
+    if (farmCaja.length > 0) {
+      html += '<div style="font-size:12px;font-weight:700;color:#67e8f9;margin-bottom:4px">💊 Farmacia (anterior)</div>';
+      html += renderItemsCaja(farmCaja);
+      html += '<div style="font-size:12px;text-align:right;color:#e2e8f0;font-weight:700;padding-top:4px;margin-bottom:10px">Subtotal: ' + formatPrecio(totalFarmCaja) + '</div>';
+    }
+    // Cierre alimento suelto
     if (cierres.length > 0) {
-      html += '<div style="font-size:12px;font-weight:700;color:#fbbf24;margin-bottom:4px">🏪 Cierre / Otros</div>';
-      html += renderItemsLista(cierres);
+      html += '<div style="font-size:12px;font-weight:700;color:#fbbf24;margin-bottom:4px">🏪 Alimento suelto</div>';
+      html += renderItemsCaja(cierres);
       html += '<div style="font-size:12px;text-align:right;color:#e2e8f0;font-weight:700;padding-top:4px;margin-bottom:10px">Subtotal: ' + formatPrecio(totalCier) + '</div>';
     }
 
     html += '<div style="background:#162032;border:1px solid #1e3a5f;border-radius:8px;padding:10px 12px;margin-top:4px">';
-    html += '<div style="font-size:13px;font-weight:700;color:#4ade80;margin-bottom:6px">💰 Ganancia estimada del día: ' + formatPrecio(ganTotal) + '</div>';
-    if (totalAcc  > 0) html += '<div style="font-size:12px;color:#94a3b8">🧸 Accesorios (100%): <span style="color:#a78bfa">' + formatPrecio(ganAcc)  + '</span></div>';
-    if (totalFarm > 0) html += '<div style="font-size:12px;color:#94a3b8">💊 Farmacia (60%): <span style="color:#67e8f9">'   + formatPrecio(ganFarm) + '</span></div>';
-    if (totalCier > 0) html += '<div style="font-size:12px;color:#94a3b8">🏪 Cierre (40%): <span style="color:#fbbf24">'     + formatPrecio(ganCier) + '</span></div>';
-    html += '</div>';
-
-    html += '</div></div>';
-  });
-
-  contenedor.innerHTML = html;
-}
-
-// =============================================
-// FILTRO RAPIDO POR PERIODO
-// =============================================
-function filtroRapido(periodo) {
-  var hoy   = new Date();
-  var desde = document.getElementById('filtro-desde');
-  var hasta = document.getElementById('filtro-hasta');
-
-  hasta.value = hoyISO();
-
-  if (periodo === 'hoy') {
-    desde.value = hoyISO();
-  } else if (periodo === 'semana') {
-    var lunes = new Date(hoy);
-    lunes.setDate(hoy.getDate() - hoy.getDay() + 1);
-    desde.value = lunes.toISOString().split('T')[0];
-  } else if (periodo === 'mes') {
-    desde.value = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-01';
-  } else if (periodo === 'todo') {
-    desde.value = '';
-    hasta.value = '';
-  }
-
-  aplicarFiltros();
-}
-
-// =============================================
-// EXPORTAR A CSV
-// =============================================
-function exportarCSV() {
-  var tipo  = (document.getElementById('filtro-tipo')  || {}).value || '';
-  var desde = (document.getElementById('filtro-desde') || {}).value || '';
-  var hasta = (document.getElementById('filtro-hasta') || {}).value || '';
-
-  var filtradas = ventasCache.filter(function(v) {
-    if (tipo && v.tipo !== tipo) return false;
-    if (v.fecha) {
-      var fecha = v.fecha.toDate ? v.fecha.toDate() : new Date(v.fecha);
-      if (desde && fecha < new Date(desde + 'T00:00:00')) return false;
-      if (hasta && fecha > new Date(hasta + 'T23:59:59')) return false;
-    }
-    return true;
-  });
-
-  if (filtradas.length === 0) {
-    mostrarAlerta('No hay datos para exportar', 'warning');
-    return;
-  }
-
-  var encabezado = ['Fecha','Tipo','Producto','Cantidad','Precio unit.','Total','Costo','Ganancia','Cliente'];
-  var filas = filtradas.map(function(v) {
-    return [formatFecha(v.fecha), v.tipo, '"' + v.nombre + '"',
-            v.cantidad, v.precio, v.total, v.costo, v.ganancia, '"' + v.cliente + '"'].join(',');
-  });
-
-  var csv  = [encabezado.join(',')].concat(filas).join('\n');
-  var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-  var url  = URL.createObjectURL(blob);
-  var a    = document.createElement('a');
-  a.href     = url;
-  a.download = 'ventas_' + hoyISO() + '.csv';
-  a.click();
-  URL.revokeObjectURL(url);
-  mostrarAlerta('Exportacion lista', 'success');
-}
-
-// =============================================
-// INIT
-// =============================================
-function _initVentas() {
-  filtroRapido('mes');
-  cargarVentas();
-  var bv = document.getElementById('buscador-v');
-  var ft = document.getElementById('filtro-tipo');
-  var fd = document.getElementById('filtro-desde');
-  var fh = document.getElementById('filtro-hasta');
-  if (bv) bv.addEventListener('input',  aplicarFiltros);
-  if (ft) ft.addEventListener('change', aplicarFiltros);
-  if (fd) fd.addEventListener('change', aplicarFiltros);
-  if (fh) fh.addEventListener('change', aplicarFiltros);
-}
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', _initVentas);
-} else {
-  _initVentas();
-}
+    html += '<div style="font-size:13px;font-weight:700;color:#4ade80;margin-bottom:6px">💰 Ganancia del día: ' + formatPrecio(ganTotal) + '</div>';
+    if (totalAccVen   > 0) html += '<div style="font-size:12px;color:#94a3b8">🧸 Accesorios (real): <span style="color:#a78bfa">'    + formatPrecio(ganAccVen)   + '</span></div>';
+    if (totalFarmVen  > 0) html += '<div style="font-size:12px;color:#94a3b8">💊 Farmacia (real): <span style="color:#67e8f9">'      + formatPrecio(ganFarmVen)  + '</span></div>';
+    if (totalAccCaja  > 0) html += '<div style="font-size:12px;color:#94a3b8">🧸 Accesorios est. (100%): <span style="color:#a78bfa">' + formatPrecio(ganAccCaja) + '</span></div>';
+    if (totalFarmCaja > 0) html += '<div style="font-size:12px;color:#94a3b8">💊 Farmacia est. (60%): <span style
