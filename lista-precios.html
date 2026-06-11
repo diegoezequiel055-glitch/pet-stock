@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lista de Precios — Pet Stock</title>
-  <link rel="stylesheet" href="css/styles.css?v=9">
+  <link rel="stylesheet" href="css/styles.css?v=11">
   <style>
     /* ======================================================
        BLOQUES POR MARCA
@@ -258,12 +258,60 @@
     body.dark .btn-especie.activo-gatos  { background: #3b1a5f; border-color: #7c3aed; }
 
     /* ======================================================
+       TOGGLE INTERNA / CLIENTE
+    ====================================================== */
+    .toggle-vista {
+      display: flex;
+      background: #1e293b;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #475569;
+    }
+    .toggle-vista button {
+      font-size: 13px;
+      padding: 6px 14px;
+      border: none;
+      background: transparent;
+      color: #94a3b8;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all .15s;
+    }
+    .toggle-vista button:hover { color: #e2e8f0; }
+    .toggle-vista button.activo-interna { background: #e2e8f0; color: #0f172a; }
+    .toggle-vista button.activo-cliente { background: #38bdf8; color: #0c1a27; }
+
+    /* ======================================================
+       NOTA CLIENTE
+    ====================================================== */
+    .nota-cliente-bar {
+      background: #0c1f35;
+      border: 1px solid #1e4a7a;
+      border-radius: 8px;
+      padding: 8px 14px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      color: #38bdf8;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+    .nota-cliente-bar.visible { display: flex; }
+
+    /* ======================================================
+       BOTONES EXPORT
+    ====================================================== */
+    .btn-export-pdf   { background: #dc2626 !important; color: white !important; border-color: #dc2626 !important; }
+    .btn-export-excel { background: #16a34a !important; color: white !important; border-color: #16a34a !important; }
+
+    /* ======================================================
        MOBILE — Header compacto (las tarjetas las renderiza el JS)
     ====================================================== */
     @media (max-width: 768px) {
       .marca-contenido { overflow-x: visible; }
       .marca-header { padding: 10px 12px; }
       .marca-header .btn-sm { font-size: 11px; padding: 4px 8px; }
+      .toggle-vista button { font-size: 12px; padding: 5px 10px; }
     }
   </style>
 </head>
@@ -281,13 +329,28 @@
 
 <div class="container">
 
-  <!-- Encabezado compacto -->
+  <!-- Encabezado -->
   <div class="page-header" style="margin-bottom:12px">
     <h1>💲 Lista de Precios</h1>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-outline" onclick="abrirModalImportarPDF()">📄 PDF</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <!-- Toggle Interna / Cliente -->
+      <div class="toggle-vista">
+        <button id="btn-vista-interna" class="activo-interna" onclick="setVista('interna')">🔒 Interna</button>
+        <button id="btn-vista-cliente" onclick="setVista('cliente')">👤 Cliente</button>
+      </div>
+      <!-- Exportar -->
+      <button class="btn btn-outline btn-export-pdf" onclick="exportarPDF()">📄 PDF</button>
+      <button class="btn btn-outline btn-export-excel" onclick="exportarExcel()">📊 Excel</button>
+      <!-- Importar PDF (secundario) -->
+      <button class="btn btn-outline" onclick="abrirModalImportarPDF()" title="Importar lista desde PDF">📥</button>
+      <!-- Nuevo -->
       <button class="btn btn-verde" onclick="abrirModal('modal-nuevo-precio')">+ Nuevo</button>
     </div>
+  </div>
+
+  <!-- Nota vista cliente -->
+  <div class="nota-cliente-bar" id="nota-cliente-bar">
+    ℹ️ Vista cliente — costos y márgenes ocultos. El PDF y Excel exportados tampoco los incluyen.
   </div>
 
   <!-- BUSCADOR HERO -->
@@ -523,11 +586,15 @@
 <!-- ===== SCRIPTS ===== -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-<script src="js/firebase-config.js?v=10"></script>
-<script src="js/utils.js?v=10"></script>
-<script src="js/lista-precios.js?v=10"></script>
-<script src="js/importar-pdf.js?v=10"></script>
-<script src="js/nav-mobile.js?v=10"></script>
+<script src="js/firebase-config.js?v=11"></script>
+<script src="js/utils.js?v=11"></script>
+<script src="js/lista-precios.js?v=20"></script>
+<script src="js/importar-pdf.js?v=11"></script>
+<script src="js/nav-mobile.js?v=11"></script>
+<!-- Librerías de exportación -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <script>
   // ---- Filtro rápido de especie (botones) ----
@@ -544,7 +611,9 @@
     var input = document.getElementById('buscador-p');
     input.value = '';
     document.getElementById('btn-limpiar-busqueda').style.display = 'none';
-    document.getElementById('leyenda-margenes').style.display = 'flex';
+    // Leyenda solo visible en vista interna
+    var enInterna = document.getElementById('btn-vista-interna').classList.contains('activo-interna');
+    document.getElementById('leyenda-margenes').style.display = enInterna ? 'flex' : 'none';
     filtrarPrecios();
     input.focus();
   }
@@ -554,7 +623,8 @@
     document.getElementById('buscador-p').addEventListener('input', function() {
       var tieneTexto = this.value.length > 0;
       document.getElementById('btn-limpiar-busqueda').style.display = tieneTexto ? 'block' : 'none';
-      document.getElementById('leyenda-margenes').style.display = tieneTexto ? 'none' : 'flex';
+      var enInterna = document.getElementById('btn-vista-interna').classList.contains('activo-interna');
+      document.getElementById('leyenda-margenes').style.display = (tieneTexto || !enInterna) ? 'none' : 'flex';
     });
 
     // Autocompletar marcas

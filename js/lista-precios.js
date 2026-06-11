@@ -10,10 +10,11 @@
 //     ultimaActualizacion
 
 // ---- ESTADO LOCAL ----
-let preciosCache    = [];
-let precioEditId    = '';   // producto en edición inline
-let marcaActualizar = ''; // marca en modal de aumento masivo
+let preciosCache      = [];
+let precioEditId      = '';   // producto en edición inline
+let marcaActualizar   = '';   // marca en modal de aumento masivo
 let productoAEliminar = null; // { id, nombre } para el modal de confirmación
+let vistaActual       = 'interna'; // 'interna' | 'cliente'
 
 // =============================================
 // CARGAR Y MOSTRAR
@@ -60,7 +61,8 @@ function renderListaCompacta(lista) {
       <div class="fila-rapida" onclick="toggleDetalleRapido(this)">
         <div class="fr-nombre">${p.nombre}</div>
         ${pesoTag}
-        <div class="fr-min">${minStr}</div>
+        <button class="btn btn-sm btn-gris" onclick="event.stopPropagation();abrirEdicionInline('${p.id}')" title="Editar" style="padding:3px 10px;font-size:13px;flex-shrink:0;margin-left:auto">✏️</button>
+        <div class="fr-min" style="margin-left:8px">${minStr}</div>
         <span class="fr-chevron">▾</span>
       </div>
       <div class="fr-detalle">
@@ -68,9 +70,9 @@ function renderListaCompacta(lista) {
           <span>Mayorista</span>
           <strong>${mayStr}</strong>
         </div>
-        ${mMin > 0 ? `<div class="fr-det-item"><span>% Min.</span><strong>${mMin}%</strong></div>` : ''}
-        ${mMay > 0 ? `<div class="fr-det-item"><span>% May.</span><strong>${mMay}%</strong></div>` : ''}
-        ${p.costo > 0 ? `<div class="fr-det-item"><span>Costo</span><strong>${formatPrecio(p.costo)}</strong></div>` : ''}
+        ${(mMin > 0 && vistaActual === 'interna') ? `<div class="fr-det-item"><span>% Min.</span><strong>${mMin}%</strong></div>` : ''}
+        ${(mMay > 0 && vistaActual === 'interna') ? `<div class="fr-det-item"><span>% May.</span><strong>${mMay}%</strong></div>` : ''}
+        ${(p.costo > 0 && vistaActual === 'interna') ? `<div class="fr-det-item"><span>Costo</span><strong>${formatPrecio(p.costo)}</strong></div>` : ''}
         <div class="fr-det-marca">📦 ${p.marca}</div>
       </div>`;
   }).join('');
@@ -87,14 +89,28 @@ function toggleDetalleRapido(fila) {
   fila.nextElementSibling?.classList.toggle('visible');
 }
 
-// ---- Render agrupado por marca ----
+// Orden fijo de bloques según el PDF
+const ORDEN_BLOQUES = [
+  'NESTLE - PURINA',
+  'ROYAL CANIN',
+  'VITAL CAT',
+  'VITAL CAN',
+  'EUKANUBA',
+  'DR COSSIA Y PROVET',
+  'ALIMENTOS VARIOS GATOS',
+  'ALIMENTOS VARIOS PARA PERROS',
+  'SANITARIOS',
+  'CEREALES',
+];
+
+// ---- Render agrupado por bloque ----
 function renderLista(lista) {
   const filtroEspecie = document.getElementById('filtro-especie-p')?.value || '';
   const textoBusq     = normalizar(document.getElementById('buscador-p')?.value || '');
 
   const filtrada = lista.filter(p => {
     const okEspecie = !filtroEspecie || p.especie === filtroEspecie;
-    const okTexto   = !textoBusq || normalizar(`${p.marca} ${p.nombre}`).includes(textoBusq);
+    const okTexto   = !textoBusq || normalizar(`${p.bloque || p.marca} ${p.nombre}`).includes(textoBusq);
     return okEspecie && okTexto;
   });
 
@@ -104,11 +120,12 @@ function renderLista(lista) {
     return;
   }
 
-  // Agrupar por marca
-  const porMarca = {};
+  // Agrupar por bloque (con fallback a marca)
+  const porBloque = {};
   for (const p of filtrada) {
-    if (!porMarca[p.marca]) porMarca[p.marca] = [];
-    porMarca[p.marca].push(p);
+    const clave = p.bloque || p.marca;
+    if (!porBloque[clave]) porBloque[clave] = [];
+    porBloque[clave].push(p);
   }
 
   const contenedor = document.getElementById('contenedor-precios');
@@ -119,15 +136,28 @@ function renderLista(lista) {
     return;
   }
 
-  contenedor.innerHTML = Object.entries(porMarca)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([marca, productos]) => renderBloqueMarca(marca, productos))
+  // Ordenar según ORDEN_BLOQUES, los que no estén van al final
+  const bloques = Object.keys(porBloque).sort((a, b) => {
+    const ia = ORDEN_BLOQUES.indexOf(a);
+    const ib = ORDEN_BLOQUES.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+
+  contenedor.innerHTML = bloques
+    .map(bloque =>
+      vistaActual === 'cliente'
+        ? renderBloqueMarcaCliente(bloque, porBloque[bloque])
+        : renderBloqueMarca(bloque, porBloque[bloque])
+    )
     .join('');
 }
 
-function renderBloqueMarca(marca, productos) {
+function renderBloqueMarca(bloque, productos) {
   const ordenados = [...productos].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
-  const marcaEsc  = marca.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const bloqueEsc = bloque.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const total     = productos.length;
   const isMobile  = window.innerWidth < 769;
 
@@ -135,16 +165,16 @@ function renderBloqueMarca(marca, productos) {
     <div class="bloque-marca">
       <div class="marca-header" onclick="toggleMarca(this)">
         <div class="marca-titulo">
-          <span class="marca-icono">▾</span>
-          <strong>${marca}</strong>
+          <span class="marca-icono">▸</span>
+          <strong>${bloque}</strong>
           <span class="marca-badge">${total} producto${total !== 1 ? 's' : ''}</span>
         </div>
         <button class="btn btn-sm btn-naranja"
-          onclick="event.stopPropagation(); abrirModalActualizarMarca('${marcaEsc}')">
+          onclick="event.stopPropagation(); abrirModalActualizarMarca('${bloqueEsc}')">
           📈 ${isMobile ? 'Costos' : 'Actualizar costos'}
         </button>
       </div>
-      <div class="marca-contenido">`;
+      <div class="marca-contenido" style="display:none">`;
 
   const cierre = `</div></div>`;
 
@@ -190,7 +220,7 @@ function renderBloqueMarca(marca, productos) {
       <thead>
         <tr>
           <th class="check-col">
-            <input type="checkbox" class="check-all-marca" data-marca="${marcaEsc}"
+            <input type="checkbox" class="check-all-marca" data-marca="${bloqueEsc}"
               onchange="seleccionarTodaMarca(this)" title="Seleccionar todos">
           </th>
           <th>Producto</th><th>Especie</th><th>Peso</th><th>Costo</th>
@@ -330,13 +360,18 @@ function abrirEdicionInline(id) {
     return;
   }
 
-  // Desktop → edición inline en la fila
+  // Desktop → edición inline en la fila (si existe); si no, usar modal
+  const fila = document.getElementById('fila-' + id);
+  if (!fila) {
+    // Vista compacta (búsqueda): no hay fila de tabla, abrir modal
+    abrirModalEdicionMobile(id);
+    return;
+  }
+
   if (precioEditId && precioEditId !== id) cerrarEdicionInline(precioEditId);
   precioEditId = id;
   const p = preciosCache.find(x => x.id === id);
   if (!p) return;
-
-  const fila = document.getElementById('fila-' + id);
   fila.classList.add('fila-editando');
   fila.innerHTML =
     '<td class="check-col"></td>' +
@@ -513,4 +548,434 @@ async function ejecutarEliminar() {
     await db.collection('precios').doc(productoAEliminar.id).delete();
     mostrarAlerta(`"${productoAEliminar.nombre}" eliminado`, 'success');
     cerrarModal('modal-confirmar-eliminar');
-    p
+    productoAEliminar = null;
+    cargarPrecios();
+  } catch (err) {
+    console.error(err);
+    mostrarAlerta('Error al eliminar', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// =============================================
+// SELECCIÓN MÚLTIPLE Y ELIMINACIÓN EN LOTE
+// =============================================
+function obtenerSeleccionados() {
+  return [...document.querySelectorAll('.check-producto:checked')].map(cb => cb.value);
+}
+
+function actualizarBarraSeleccion() {
+  const ids = obtenerSeleccionados();
+  const barra = document.getElementById('barra-seleccion');
+  const texto = document.getElementById('texto-seleccion');
+  if (!barra) return;
+  if (ids.length > 0) {
+    barra.classList.add('visible');
+    if (texto) texto.textContent = ids.length + ' producto' + (ids.length !== 1 ? 's' : '') + ' seleccionado' + (ids.length !== 1 ? 's' : '');
+  } else {
+    barra.classList.remove('visible');
+  }
+}
+
+function seleccionarTodaMarca(checkbox) {
+  const tabla = checkbox.closest('table');
+  if (!tabla) return;
+  tabla.querySelectorAll('.check-producto').forEach(cb => { cb.checked = checkbox.checked; });
+  actualizarBarraSeleccion();
+}
+
+function deseleccionarTodo() {
+  document.querySelectorAll('.check-producto, .check-all-marca').forEach(cb => { cb.checked = false; });
+  actualizarBarraSeleccion();
+}
+
+async function eliminarSeleccionados() {
+  const ids = obtenerSeleccionados();
+  if (ids.length === 0) return;
+  if (!confirm('¿Eliminar ' + ids.length + ' producto' + (ids.length !== 1 ? 's' : '') + '? Esta acción no se puede deshacer.')) return;
+  const btn = document.getElementById('btn-eliminar-seleccionados');
+  if (btn) btn.disabled = true;
+  try {
+    const batch = db.batch();
+    ids.forEach(id => batch.delete(db.collection('precios').doc(id)));
+    await batch.commit();
+    mostrarAlerta(ids.length + ' producto' + (ids.length !== 1 ? 's' : '') + ' eliminado' + (ids.length !== 1 ? 's' : ''), 'success');
+    deseleccionarTodo();
+    cargarPrecios();
+  } catch (err) {
+    console.error(err);
+    mostrarAlerta('Error al eliminar', 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// =============================================
+// ACTUALIZAR COSTOS DE UNA MARCA COMPLETA
+// =============================================
+function abrirModalActualizarMarca(marca) {
+  marcaActualizar = marca;
+  const el = document.getElementById('upd-marca-nombre');
+  if (el) el.textContent = marca;
+  const inp = document.getElementById('upd-porcentaje');
+  if (inp) inp.value = '';
+  const prev = document.getElementById('upd-preview');
+  if (prev) prev.innerHTML = '';
+  abrirModal('modal-actualizar-marca');
+}
+
+function previewActualizarMarca() {
+  const pct      = parseFloat(document.getElementById('upd-porcentaje').value) || 0;
+  const productos = preciosCache.filter(p => (p.bloque || p.marca) === marcaActualizar);
+  const preview   = document.getElementById('upd-preview');
+  if (!pct || !productos.length) { if (preview) preview.innerHTML = ''; return; }
+  preview.innerHTML =
+    '<table class="tabla-precios" style="margin-top:12px;min-width:0"><thead><tr>' +
+    '<th>Producto</th><th>Costo actual</th><th>Costo nuevo</th><th>Min. nuevo</th><th>May. nuevo</th>' +
+    '</tr></thead><tbody>' +
+    productos.map(p => {
+      const nc  = Math.round(p.costo * (1 + pct / 100));
+      const nm  = Math.round(nc * (1 + (p.margenMinorista || 0) / 100));
+      const nma = Math.round(nc * (1 + (p.margenMayorista || 0) / 100));
+      return '<tr><td>' + p.nombre + '</td><td>' + formatPrecio(p.costo) + '</td>' +
+             '<td class="margen-ok"><strong>' + formatPrecio(nc) + '</strong></td>' +
+             '<td>' + formatPrecio(nm) + '</td><td>' + formatPrecio(nma) + '</td></tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
+async function confirmarActualizarMarca() {
+  const pct = parseFloat(document.getElementById('upd-porcentaje').value);
+  if (!pct || isNaN(pct)) { mostrarAlerta('Ingresá un porcentaje válido', 'warning'); return; }
+  const productos = preciosCache.filter(p => (p.bloque || p.marca) === marcaActualizar);
+  const btn = document.getElementById('btn-confirmar-marca');
+  if (btn) btn.disabled = true;
+  try {
+    const batch = db.batch();
+    for (const p of productos) {
+      const nc  = Math.round(p.costo * (1 + pct / 100));
+      const nm  = Math.round(nc * (1 + (p.margenMinorista || 0) / 100));
+      const nma = Math.round(nc * (1 + (p.margenMayorista || 0) / 100));
+      batch.update(db.collection('precios').doc(p.id), {
+        costo: nc, precioMinorista: nm, precioMayorista: nma,
+        ultimaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+    await batch.commit();
+    mostrarAlerta('✅ ' + productos.length + ' productos de ' + marcaActualizar + ' actualizados (+' + pct + '%)', 'success');
+    cerrarModal('modal-actualizar-marca');
+    cargarPrecios();
+  } catch (err) {
+    console.error(err);
+    mostrarAlerta('Error al actualizar la marca', 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// =============================================
+// BÚSQUEDA / FILTRO
+// =============================================
+function filtrarPrecios() {
+  renderLista(preciosCache);
+}
+
+// =============================================
+// TOGGLE VISTA INTERNA / CLIENTE
+// =============================================
+function setVista(v) {
+  vistaActual = v;
+  const btnI = document.getElementById('btn-vista-interna');
+  const btnC = document.getElementById('btn-vista-cliente');
+  if (btnI) { btnI.className = v === 'interna' ? 'activo-interna' : ''; }
+  if (btnC) { btnC.className = v === 'cliente' ? 'activo-cliente' : ''; }
+
+  const leyenda = document.getElementById('leyenda-margenes');
+  const nota    = document.getElementById('nota-cliente-bar');
+  const busq    = document.getElementById('buscador-p');
+  const hayBusq = busq && busq.value.length > 0;
+
+  if (leyenda) leyenda.style.display = (v === 'interna' && !hayBusq) ? 'flex' : 'none';
+  if (nota)    nota.classList.toggle('visible', v === 'cliente');
+
+  renderLista(preciosCache);
+}
+
+// =============================================
+// RENDER VISTA CLIENTE (tabla sin costo ni %)
+// =============================================
+function renderBloqueMarcaCliente(marca, productos) {
+  const ordenados = [...productos].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+  const total     = productos.length;
+  const isMobile  = window.innerWidth < 769;
+
+  const cabecera = `
+    <div class="bloque-marca">
+      <div class="marca-header" onclick="toggleMarca(this)">
+        <div class="marca-titulo">
+          <span class="marca-icono">▸</span>
+          <strong>${marca}</strong>
+          <span class="marca-badge">${total} producto${total !== 1 ? 's' : ''}</span>
+        </div>
+      </div>
+      <div class="marca-contenido" style="display:none">`;
+  const cierre = `</div></div>`;
+
+  if (isMobile) {
+    // Mobile: tarjetas sin botones de edición ni margen
+    const cards = ordenados.map(p => `
+      <div style="background:#1e293b;border:1px solid #1e3a5f;border-radius:10px;padding:12px 14px;margin:0 10px 8px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div style="flex:1;min-width:0">
+            <div style="color:#fff;font-weight:700;font-size:14px;margin-bottom:4px">${p.nombre}</div>
+            <div style="display:flex;gap:5px;flex-wrap:wrap">
+              ${p.especie   ? `<span style="background:#374151;color:#d1d5db;padding:1px 7px;border-radius:5px;font-size:11px;font-weight:600">${p.especie}</span>` : ''}
+              ${p.unidadPeso ? `<span style="background:#0f172a;color:#4ade80;padding:1px 7px;border-radius:5px;font-size:11px;font-weight:600">${p.unidadPeso}</span>` : ''}
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;margin-left:10px">
+            <div style="font-size:18px;font-weight:900;color:#4ade80;line-height:1.1">${formatPrecio(p.precioMinorista)}</div>
+            <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase">Minorista</div>
+          </div>
+        </div>
+        ${p.precioMayorista > 0 ? `
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span style="background:#0f172a;color:#94a3b8;padding:2px 9px;border-radius:5px;font-size:12px">Mayorista: ${formatPrecio(p.precioMayorista)}</span>
+        </div>` : ''}
+      </div>`).join('');
+    return cabecera + cards + cierre;
+  }
+
+  // Desktop: tabla sin costo, sin %, sin checkbox, sin acciones
+  const filas = ordenados.map(p => `
+    <tr>
+      <td data-label="Producto">${p.nombre}</td>
+      <td data-label="Especie"><span class="tag tag-${p.especie}">${p.especie || '-'}</span></td>
+      <td data-label="Peso">${p.unidadPeso || '-'}</td>
+      <td data-label="Minorista">${formatPrecio(p.precioMinorista)}</td>
+      <td data-label="Mayorista">${formatPrecio(p.precioMayorista)}</td>
+    </tr>`).join('');
+
+  return cabecera + `
+    <table class="tabla-precios" style="min-width:420px">
+      <thead>
+        <tr>
+          <th>Producto</th><th>Especie</th><th>Peso</th><th>Minorista</th><th>Mayorista</th>
+        </tr>
+      </thead>
+      <tbody>${filas}</tbody>
+    </table>` + cierre;
+}
+
+// =============================================
+// HELPER: LISTA FILTRADA PARA EXPORTAR
+// =============================================
+function _getListaFiltrada() {
+  const filtroEspecie = document.getElementById('filtro-especie-p')?.value || '';
+  const textoBusq     = normalizar(document.getElementById('buscador-p')?.value || '');
+  return preciosCache.filter(p => {
+    const okEspecie = !filtroEspecie || p.especie === filtroEspecie;
+    const okTexto   = !textoBusq || normalizar(`${p.marca} ${p.nombre}`).includes(textoBusq);
+    return okEspecie && okTexto;
+  }).sort((a, b) => a.marca.localeCompare(b.marca) || (a.nombre || '').localeCompare(b.nombre || ''));
+}
+
+// =============================================
+// EXPORTAR PDF — dos columnas gatos | perros (landscape A4, ~3-4 páginas)
+// =============================================
+function exportarPDF() {
+  try {
+    if (!window.jspdf) { mostrarAlerta('Librería PDF cargando, intentá en un segundo', 'warning'); return; }
+    var jsPDF = window.jspdf.jsPDF;
+    var esCliente = vistaActual === 'cliente';
+    var doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    var fecha = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+    doc.setFontSize(12); doc.setTextColor(30, 41, 59);
+    doc.text(esCliente ? 'Lista de Precios — Pet Stock' : 'Lista de Precios Interna — Pet Stock', 10, 11);
+    doc.setFontSize(7.5); doc.setTextColor(100, 116, 139);
+    doc.text('Fecha: ' + fecha, 10, 17);
+
+    var lista = _getListaFiltrada();
+
+    // Agrupar por bloque, luego por especie
+    var porBloque = {};
+    lista.forEach(function(p) {
+      var b = p.bloque || p.marca;
+      if (!porBloque[b]) porBloque[b] = { gatos: [], perros: [] };
+      if (p.especie === 'gatos' || p.especie === 'ambos') porBloque[b].gatos.push(p);
+      if (p.especie === 'perros' || p.especie === 'ambos') porBloque[b].perros.push(p);
+    });
+
+    var bloqueOrdenados = Object.keys(porBloque).sort(function(a, b) {
+      var ia = ORDEN_BLOQUES.indexOf(a), ib = ORDEN_BLOQUES.indexOf(b);
+      if (ia === -1 && ib === -1) return a.localeCompare(b);
+      if (ia === -1) return 1; if (ib === -1) return -1; return ia - ib;
+    });
+
+    // Columnas: cliente = 4+4, interna = 5+5 (con separador central)
+    var numCols = esCliente ? 9 : 11;
+    var headRow = esCliente
+      ? [
+          { content: '🐱  GATOS', colSpan: 4, styles: { halign: 'center', fillColor: [45, 26, 60], textColor: [255,255,255] } },
+          { content: '', styles: { fillColor: [30,30,30] } },
+          { content: '🐶  PERROS', colSpan: 4, styles: { halign: 'center', fillColor: [20, 40, 80], textColor: [255,255,255] } }
+        ]
+      : [
+          { content: '🐱  GATOS', colSpan: 5, styles: { halign: 'center', fillColor: [45, 26, 60], textColor: [255,255,255] } },
+          { content: '', styles: { fillColor: [30,30,30] } },
+          { content: '🐶  PERROS', colSpan: 5, styles: { halign: 'center', fillColor: [20, 40, 80], textColor: [255,255,255] } }
+        ];
+    var subHead = esCliente
+      ? ['Producto', 'Peso', 'Minorista', 'Mayorista', '', 'Producto', 'Peso', 'Minorista', 'Mayorista']
+      : ['Producto', 'Peso', 'Costo', 'Minorista', '% Min.', '', 'Producto', 'Peso', 'Costo', 'Minorista', '% Min.'];
+
+    var body = [];
+    var SEP_STYLE = { fillColor: [50, 50, 50] };
+
+    bloqueOrdenados.forEach(function(bloque) {
+      var g = porBloque[bloque].gatos;
+      var p = porBloque[bloque].perros;
+      if (!g.length && !p.length) return;
+      // Fila separadora de bloque (span total)
+      body.push([{ content: bloque, colSpan: numCols,
+        styles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 6.5,
+                  cellPadding: { top: 2, bottom: 2, left: 4, right: 4 } } }]);
+      var maxLen = Math.max(g.length, p.length);
+      for (var i = 0; i < maxLen; i++) {
+        var gi = g[i], pi = p[i];
+        var mGMin = gi && gi.costo > 0 && gi.precioMinorista > 0 ? Math.round(((gi.precioMinorista - gi.costo) / gi.costo) * 100) + '%' : '—';
+        var mPMin = pi && pi.costo > 0 && pi.precioMinorista > 0 ? Math.round(((pi.precioMinorista - pi.costo) / pi.costo) * 100) + '%' : '—';
+        if (esCliente) {
+          body.push([
+            gi ? gi.nombre : '', gi ? gi.unidadPeso || '-' : '', gi ? formatPrecio(gi.precioMinorista) : '', gi ? formatPrecio(gi.precioMayorista) : '',
+            { content: '', styles: SEP_STYLE },
+            pi ? pi.nombre : '', pi ? pi.unidadPeso || '-' : '', pi ? formatPrecio(pi.precioMinorista) : '', pi ? formatPrecio(pi.precioMayorista) : ''
+          ]);
+        } else {
+          body.push([
+            gi ? gi.nombre : '', gi ? gi.unidadPeso || '-' : '', gi ? formatPrecio(gi.costo) : '', gi ? formatPrecio(gi.precioMinorista) : '', mGMin,
+            { content: '', styles: SEP_STYLE },
+            pi ? pi.nombre : '', pi ? pi.unidadPeso || '-' : '', pi ? formatPrecio(pi.costo) : '', pi ? formatPrecio(pi.precioMinorista) : '', mPMin
+          ]);
+        }
+      }
+    });
+
+    // Anchos de columna (landscape A4 = 277mm útiles)
+    var colStyles = esCliente
+      ? { 0:{cellWidth:60}, 1:{cellWidth:11}, 2:{cellWidth:24}, 3:{cellWidth:24}, 4:{cellWidth:3,fillColor:[220,220,220]}, 5:{cellWidth:60}, 6:{cellWidth:11}, 7:{cellWidth:24}, 8:{cellWidth:24} }
+      : { 0:{cellWidth:51}, 1:{cellWidth:10}, 2:{cellWidth:18}, 3:{cellWidth:20}, 4:{cellWidth:13}, 5:{cellWidth:3,fillColor:[220,220,220]}, 6:{cellWidth:51}, 7:{cellWidth:10}, 8:{cellWidth:18}, 9:{cellWidth:20}, 10:{cellWidth:13} };
+
+    doc.autoTable({
+      startY: 20,
+      head: [headRow, subHead],
+      body: body,
+      styles:             { fontSize: 6, cellPadding: 0.9, overflow: 'ellipsize' },
+      headStyles:         { fillColor: [51, 65, 85], textColor: [255, 255, 255], fontSize: 6.5, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles:       colStyles,
+      margin:             { left: 10, right: 10, top: 10 },
+    });
+
+    doc.save('precios-' + (esCliente ? 'cliente' : 'interna') + '-' + fecha.replace(/\//g, '-') + '.pdf');
+    mostrarAlerta('\u2705 PDF descargado', 'success');
+  } catch (err) { console.error(err); mostrarAlerta('Error al generar el PDF', 'error'); }
+}
+
+
+// =============================================
+// EXPORTAR EXCEL — hoja con bloques separados
+// =============================================
+function exportarExcel() {
+  try {
+    if (!window.XLSX) { mostrarAlerta('Librería Excel cargando, intentá en un segundo', 'warning'); return; }
+    const esCliente = vistaActual === 'cliente';
+    const lista     = _getListaFiltrada();
+    const porBloque = {};
+    lista.forEach(p => { const b = p.bloque || p.marca; if (!porBloque[b]) porBloque[b] = []; porBloque[b].push(p); });
+
+    const bloqueOrdenados = Object.keys(porBloque).sort((a, b) => {
+      const ia = ORDEN_BLOQUES.indexOf(a), ib = ORDEN_BLOQUES.indexOf(b);
+      if (ia === -1 && ib === -1) return a.localeCompare(b);
+      if (ia === -1) return 1; if (ib === -1) return -1;
+      return ia - ib;
+    });
+
+    const headers = esCliente
+      ? ['Producto', 'Especie', 'Peso', 'Precio Minorista', 'Precio Mayorista']
+      : ['Producto', 'Especie', 'Peso', 'Costo', 'Precio Minorista', '% Margen Min.', 'Precio Mayorista', '% Margen May.'];
+
+    const filas = [];
+
+    bloqueOrdenados.forEach(bloque => {
+      // Fila de título del bloque
+      filas.push([bloque]);
+      // Encabezados de columna
+      filas.push(headers);
+      // Productos
+      porBloque[bloque].forEach(p => {
+        const mMin = p.costo > 0 && p.precioMinorista > 0
+          ? Math.round(((p.precioMinorista - p.costo) / p.costo) * 100) : 0;
+        const mMay = p.costo > 0 && p.precioMayorista > 0
+          ? Math.round(((p.precioMayorista - p.costo) / p.costo) * 100) : 0;
+        filas.push(esCliente
+          ? [p.nombre, p.especie || '', p.unidadPeso || '', p.precioMinorista || 0, p.precioMayorista || 0]
+          : [p.nombre, p.especie || '', p.unidadPeso || '', p.costo || 0, p.precioMinorista || 0, mMin, p.precioMayorista || 0, mMay]);
+      });
+      // Fila vacía separadora
+      filas.push([]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(filas);
+    ws['!cols'] = esCliente
+      ? [{ wch: 45 }, { wch: 10 }, { wch: 8 }, { wch: 18 }, { wch: 18 }]
+      : [{ wch: 45 }, { wch: 10 }, { wch: 8 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 14 }];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, esCliente ? 'Lista Cliente' : 'Lista Interna');
+
+    const fecha = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
+    XLSX.writeFile(wb, 'precios-' + (esCliente ? 'cliente' : 'interna') + '-' + fecha + '.xlsx');
+    mostrarAlerta('\u2705 Excel descargado', 'success');
+  } catch (err) {
+    console.error(err);
+    mostrarAlerta('Error al generar el Excel', 'error');
+  }
+}
+
+// =============================================
+// HELPER: LISTA FILTRADA PARA EXPORTAR
+// =============================================
+function _getListaFiltrada() {
+  const filtroEspecie = document.getElementById('filtro-especie-p')?.value || '';
+  const textoBusq     = normalizar(document.getElementById('buscador-p')?.value || '');
+  return preciosCache.filter(p => {
+    const okEspecie = !filtroEspecie || p.especie === filtroEspecie;
+    const okTexto   = !textoBusq || normalizar(`${p.marca} ${p.nombre}`).includes(textoBusq);
+    return okEspecie && okTexto;
+  }).sort((a, b) => a.marca.localeCompare(b.marca) || (a.nombre || '').localeCompare(b.nombre || ''));
+}
+
+// =============================================
+// INIT
+// =============================================
+function _initPrecios() {
+  cargarPrecios();
+  document.getElementById('form-nuevo-precio')?.addEventListener('submit', agregarPrecio);
+  document.getElementById('buscador-p')?.addEventListener('input', filtrarPrecios);
+  document.getElementById('filtro-especie-p')?.addEventListener('change', filtrarPrecios);
+  ['np-costo','np-precio-min','np-precio-may'].forEach(function(id) {
+    document.getElementById(id)?.addEventListener('input', calcularPreviewNuevo);
+  });
+  document.getElementById('upd-porcentaje')?.addEventListener('input', previewActualizarMarca);
+  ['epm-costo','epm-precio-min','epm-precio-may'].forEach(function(id) {
+    document.getElementById(id)?.addEventListener('input', recalcularModal);
+  });
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _initPrecios);
+} else {
+  _initPrecios();
+}
