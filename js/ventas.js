@@ -153,21 +153,38 @@ function aplicarFiltros() {
 // RENDER RESUMEN (TARJETAS)
 // =============================================
 function renderResumen(lista, cajaFiltrada) {
+  // Ventas de bolsas (tipo bolsa/minorista/mayorista)
+  var ventasBolsas = lista.filter(function(v) { return v.tipo !== 'accesorio' && v.tipo !== 'farmacia'; });
   var totalVentas    = lista.length;
-  var totalFacturado = lista.reduce(function(s, v) { return s + v.total; }, 0);
-  var totalCosto     = lista.reduce(function(s, v) { return s + v.costo; }, 0);
-  var gananciaBolsas = lista.reduce(function(s, v) { return s + v.ganancia; }, 0);
+  var totalFacturado = ventasBolsas.reduce(function(s, v) { return s + v.total; }, 0);
+  var totalCosto     = ventasBolsas.reduce(function(s, v) { return s + v.costo; }, 0);
+  var gananciaBolsas = ventasBolsas.reduce(function(s, v) { return s + v.ganancia; }, 0);
 
+  // Ventas nuevas de accesorios/farmacia (con ganancia real desde costo)
+  var ventasAcc  = lista.filter(function(v) { return v.tipo === 'accesorio'; });
+  var ventasFarm = lista.filter(function(v) { return v.tipo === 'farmacia'; });
+
+  var totalAccVen  = ventasAcc.reduce(function(s, v)  { return s + v.total; }, 0);
+  var totalFarmVen = ventasFarm.reduce(function(s, v) { return s + v.total; }, 0);
+  var ganAccVen    = ventasAcc.reduce(function(s, v)  { return s + v.ganancia; }, 0);
+  var ganFarmVen   = ventasFarm.reduce(function(s, v) { return s + v.ganancia; }, 0);
+
+  // Datos viejos de caja_petshop (porcentaje estimado)
   var totalCierre     = cajaFiltrada.filter(function(r) { return r.tipo === 'cierre' || r.tipo === 'otro'; }).reduce(function(s, r) { return s + r.monto; }, 0);
-  var totalFarmacia   = cajaFiltrada.filter(function(r) { return r.tipo === 'farmacia'; }).reduce(function(s, r) { return s + r.monto; }, 0);
-  var totalAccesorios = cajaFiltrada.filter(function(r) { return r.tipo === 'accesorios'; }).reduce(function(s, r) { return s + r.monto; }, 0);
+  var totalFarmCaja   = cajaFiltrada.filter(function(r) { return r.tipo === 'farmacia'; }).reduce(function(s, r) { return s + r.monto; }, 0);
+  var totalAccCaja    = cajaFiltrada.filter(function(r) { return r.tipo === 'accesorios'; }).reduce(function(s, r) { return s + r.monto; }, 0);
 
-  var gananciaCierre     = totalCierre     * 0.40;
-  var gananciaFarmacia   = totalFarmacia   * 0.60;
-  var gananciaAccesorios = totalAccesorios * 1.00;
+  var gananciaCierre   = totalCierre   * 0.40;
+  var ganFarmCaja      = totalFarmCaja * 0.60;
+  var ganAccCaja       = totalAccCaja  * 1.00;
+
+  var totalFarmacia   = totalFarmVen  + totalFarmCaja;
+  var totalAccesorios = totalAccVen   + totalAccCaja;
+  var gananciaFarmacia   = ganFarmVen + ganFarmCaja;
+  var gananciaAccesorios = ganAccVen  + ganAccCaja;
 
   var totalGanancia = gananciaBolsas + gananciaCierre + gananciaFarmacia + gananciaAccesorios;
-  var totalCaja     = totalFacturado + totalCierre + totalFarmacia + totalAccesorios;
+  var totalCaja     = totalFacturado + totalAccVen + totalFarmVen + totalCierre + totalFarmCaja + totalAccCaja;
   var margenGlobal  = totalCaja > 0 ? Math.round((totalGanancia / totalCaja) * 100) : 0;
 
   set('res-v-cantidad',  totalVentas);
@@ -185,10 +202,16 @@ function renderResumen(lista, cajaFiltrada) {
   set('res-cierre-gan',   '💰 Ganancia est.: ' + formatPrecio(gananciaCierre) + '\n(40% sobre ventas a lo suelto)');
 
   set('res-farmacia-total', formatPrecio(totalFarmacia));
-  set('res-farmacia-gan',   '💰 Ganancia est.: ' + formatPrecio(gananciaFarmacia) + '\n(60% sobre ventas de farmacia)');
+  var labelFarm = ganFarmVen > 0
+    ? '💰 Ganancia real: ' + formatPrecio(ganFarmVen) + (ganFarmCaja > 0 ? ' + est.: ' + formatPrecio(ganFarmCaja) : '')
+    : '💰 Ganancia est.: ' + formatPrecio(gananciaFarmacia) + '\n(60% sobre ventas de farmacia)';
+  set('res-farmacia-gan', labelFarm);
 
   set('res-acc-total', formatPrecio(totalAccesorios));
-  set('res-acc-gan',   '💰 Ganancia est.: ' + formatPrecio(gananciaAccesorios) + '\n(100% — ganancia total sobre accesorios)');
+  var labelAcc = ganAccVen > 0
+    ? '💰 Ganancia real: ' + formatPrecio(ganAccVen) + (ganAccCaja > 0 ? ' + est.: ' + formatPrecio(ganAccCaja) : '')
+    : '💰 Ganancia est.: ' + formatPrecio(gananciaAccesorios) + '\n(100% — ganancia total sobre accesorios)';
+  set('res-acc-gan', labelAcc);
 }
 
 function set(id, val) {
