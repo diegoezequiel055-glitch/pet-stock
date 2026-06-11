@@ -69,4 +69,7 @@ function normalizar(texto) {
     .replace(/[̀-ͯ]/g, '');
 }
 
-// --- Obtener fecha actual como string YYYY-MM-DD (para inputs date) ---
+// --- Obtener fecha actual como string YYYY-MM-DD (para inputs date) ---
+function hoyISO() {
+  return new Date().toISOString().split('T')[0];
+}
