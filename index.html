@@ -4,83 +4,350 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pet Stock — Inicio</title>
-  <link rel="stylesheet" href="css/styles.css?v=7">
+  <link rel="stylesheet" href="css/styles.css?v=13">
   <style>
-    .bienvenida {
-      text-align: center;
-      padding: 40px 20px 28px;
-    }
-    .bienvenida h1 { font-size: 28px; color: var(--verde); margin-bottom: 6px; }
-    .bienvenida p  { color: var(--gris); font-size: 15px; }
-
-    .grid-modulos {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin-bottom: 32px;
-    }
-    .card-modulo {
-      background: white;
-      border-radius: 12px;
-      box-shadow: var(--sombra);
-      padding: 28px 24px;
-      text-decoration: none;
-      color: var(--texto);
+    /* ── SPLASH SCREEN ── */
+    #splash-screen {
+      position: fixed;
+      inset: 0;
+      background: #0a0f1e;
+      z-index: 9999;
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      transition: transform .15s, box-shadow .15s;
-      border-left: 5px solid var(--verde);
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+      transition: opacity 0.5s ease;
     }
-    .card-modulo:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 6px 20px rgba(0,0,0,0.13);
+    #splash-screen.fade-out {
+      opacity: 0;
+      pointer-events: none;
     }
-    .card-modulo .icono { font-size: 32px; }
-    .card-modulo h2    { font-size: 17px; font-weight: 700; margin: 0; }
-    .card-modulo p     { font-size: 13px; color: var(--gris); margin: 0; }
-    .card-modulo.azul  { border-left-color: var(--azul); }
-    .card-modulo.naranja { border-left-color: var(--naranja); }
-    .card-modulo.violeta { border-left-color: #6a1b9a; }
 
-    /* Resumen del día */
-    .seccion-titulo {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--gris);
-      margin-bottom: 12px;
-      text-transform: uppercase;
-      letter-spacing: .5px;
+    .splash-logo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      filter: drop-shadow(0 0 18px rgba(74, 222, 128, 0.55));
     }
-    .tarjetas-hoy {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 12px;
-      margin-bottom: 32px;
+    .splash-logo-icon {
+      font-size: 64px;
+      line-height: 1;
+      animation: pulse-logo 2s ease-in-out infinite;
     }
-    .tarjeta-hoy {
-      background: white;
-      border-radius: 10px;
-      padding: 16px 18px;
-      box-shadow: var(--sombra);
+    @keyframes pulse-logo {
+      0%, 100% { filter: drop-shadow(0 0 8px rgba(74,222,128,.4)); transform: scale(1); }
+      50%       { filter: drop-shadow(0 0 22px rgba(74,222,128,.9)); transform: scale(1.06); }
     }
-    .tarjeta-hoy .etiqueta {
+    .splash-logo-title {
+      font-size: 34px;
+      font-weight: 900;
+      color: #4ade80;
+      letter-spacing: -0.5px;
+    }
+    .splash-logo-sub {
+      font-size: 13px;
+      color: #475569;
+      text-align: center;
+    }
+
+    .splash-progress-wrap {
+      width: 240px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+    }
+    .splash-bar-bg {
+      width: 100%;
+      height: 4px;
+      background: #1e293b;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .splash-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #4ade80, #22d3ee);
+      border-radius: 4px;
+      transition: width 0.12s ease;
+      box-shadow: 0 0 8px rgba(74,222,128,0.6);
+    }
+    .splash-status {
+      font-size: 12px;
+      color: #475569;
+      text-align: center;
+      min-height: 16px;
+      transition: opacity 0.3s;
+    }
+    .splash-pct {
       font-size: 11px;
       font-weight: 700;
-      color: var(--gris);
-      letter-spacing: .5px;
+      color: #4ade80;
+    }
+
+    /* ── BASE DASHBOARD ── */
+    body {
+      background: #0a0f1e;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    .dash-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 16px 100px;
+    }
+
+    /* ── ENCABEZADO ── */
+    .dash-header {
+      text-align: center;
+      padding: 32px 20px 28px;
+    }
+    .dash-header h1 {
+      font-size: 32px;
+      font-weight: 800;
+      color: #4ade80;
+      margin-bottom: 6px;
+      letter-spacing: -0.5px;
+    }
+    .dash-header p {
+      font-size: 14px;
+      color: #64748b;
+      margin: 0;
+    }
+
+    /* ── SECCIÓN TÍTULO ── */
+    .sec-titulo {
+      font-size: 11px;
+      font-weight: 800;
+      color: #4ade80;
+      letter-spacing: 2px;
       text-transform: uppercase;
+      margin-bottom: 14px;
+      margin-top: 28px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    .tarjeta-hoy .valor {
-      font-size: 22px;
+    .sec-titulo::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #1e293b;
+    }
+
+    /* ── FILA RESUMEN HOY ── */
+    .hoy-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 600px) {
+      .hoy-grid { grid-template-columns: 1fr; }
+    }
+
+    .hoy-card {
+      background: #111827;
+      border-radius: 14px;
+      padding: 20px;
+      border: 1px solid #1e293b;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    .hoy-card-titulo {
+      font-size: 10px;
+      font-weight: 800;
+      color: #4ade80;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .hoy-card-titulo span { font-size: 14px; }
+
+    .hoy-metricas {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .hoy-metrica {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .hoy-metrica-label {
+      font-size: 11px;
       font-weight: 700;
-      color: var(--verde);
-      margin-top: 4px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: .5px;
     }
-    .tarjeta-hoy .valor.rojo { color: var(--rojo); }
+    .hoy-metrica-valor {
+      font-size: 22px;
+      font-weight: 800;
+      color: #f8fafc;
+      line-height: 1;
+    }
+    .hoy-metrica-valor.verde { color: #4ade80; }
+    .hoy-metrica-valor.rojo  { color: #f87171; }
+    .hoy-metrica-valor.azul  { color: #60a5fa; }
+
+    .hoy-divider {
+      height: 1px;
+      background: #1e293b;
+      margin: 4px 0;
+    }
+
+    /* Barra de stock bolsas */
+    .stock-bar-wrap {
+      margin-top: 6px;
+    }
+    .stock-bar-bg {
+      height: 5px;
+      background: #1e293b;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .stock-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4ade80, #22d3ee);
+      border-radius: 4px;
+      transition: width 1s ease;
+      width: 0%;
+    }
+    .stock-bar-label {
+      font-size: 10px;
+      color: #64748b;
+      margin-top: 4px;
+      text-align: right;
+    }
+
+    /* Alerta acc sin stock */
+    .acc-alerta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(239,68,68,.08);
+      border: 1px solid rgba(239,68,68,.2);
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-top: 8px;
+    }
+    .acc-alerta-icon { font-size: 18px; }
+    .acc-alerta-num {
+      font-size: 26px;
+      font-weight: 900;
+      color: #f87171;
+      line-height: 1;
+    }
+    .acc-alerta-text {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    /* ── GRID MÓDULOS ── */
+    .modulos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+    }
+    @media (max-width: 600px) {
+      .modulos-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .mod-card {
+      background: #111827;
+      border-radius: 14px;
+      padding: 20px 18px;
+      border: 1px solid #1e293b;
+      text-decoration: none;
+      color: #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: transform .15s, border-color .15s, box-shadow .15s;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+    .mod-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .mod-card.verde::before  { background: linear-gradient(90deg,#4ade80,#22d3ee); }
+    .mod-card.azul::before   { background: linear-gradient(90deg,#60a5fa,#818cf8); }
+    .mod-card.naranja::before{ background: linear-gradient(90deg,#fb923c,#f59e0b); }
+    .mod-card.violeta::before{ background: linear-gradient(90deg,#a78bfa,#ec4899); }
+    .mod-card.cian::before   { background: linear-gradient(90deg,#22d3ee,#4ade80); }
+
+    .mod-card:hover {
+      transform: translateY(-4px);
+      border-color: #334155;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    }
+    .mod-icono { font-size: 28px; line-height: 1; margin-bottom: 4px; }
+    .mod-titulo { font-size: 15px; font-weight: 700; color: #f1f5f9; }
+    .mod-desc   { font-size: 11px; color: #64748b; line-height: 1.4; }
+    .mod-metrica {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #1e293b;
+      font-size: 12px;
+      font-weight: 700;
+      color: #94a3b8;
+      min-height: 18px;
+    }
+    .mod-metrica .num {
+      font-size: 18px;
+      font-weight: 800;
+      color: #4ade80;
+      display: block;
+      line-height: 1.2;
+    }
+    .mod-card.azul   .mod-metrica .num { color: #60a5fa; }
+    .mod-card.naranja .mod-metrica .num { color: #fb923c; }
+    .mod-card.violeta .mod-metrica .num { color: #a78bfa; }
+    .mod-card.cian   .mod-metrica .num { color: #22d3ee; }
+
+    /* Loading skeleton */
+    .skeleton {
+      display: inline-block;
+      width: 80px; height: 20px;
+      background: linear-gradient(90deg, #1e293b 25%, #263548 50%, #1e293b 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 6px;
+      vertical-align: middle;
+    }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
   </style>
 </head>
 <body>
+
+<!-- SPLASH SCREEN -->
+<div id="splash-screen">
+  <div class="splash-logo">
+    <div class="splash-logo-icon">🐾</div>
+    <div class="splash-logo-title">Pet Stock</div>
+    <div class="splash-logo-sub">Distribuidora de alimentos balanceados</div>
+  </div>
+  <div class="splash-progress-wrap">
+    <div class="splash-bar-bg">
+      <div class="splash-bar-fill" id="splash-bar"></div>
+    </div>
+    <div class="splash-status" id="splash-status">Iniciando...</div>
+    <div class="splash-pct" id="splash-pct">0%</div>
+  </div>
+</div>
 
 <nav>
   <a class="logo" href="index.html">🐾 Pet Stock</a>
@@ -91,114 +358,263 @@
   <a href="ventas.html">📋 Historial</a>
 </nav>
 
-<div class="container">
+<div class="dash-container">
 
-  <div class="bienvenida">
+  <!-- ENCABEZADO -->
+  <div class="dash-header">
     <h1>🐾 Pet Stock</h1>
     <p>Distribuidora de alimentos balanceados — Panel de gestión</p>
   </div>
 
-  <!-- Resumen del día -->
-  <div class="seccion-titulo">Hoy</div>
-  <div class="tarjetas-hoy">
-    <div class="tarjeta-hoy">
-      <div class="etiqueta">Ventas hoy</div>
-      <div class="valor" id="hoy-cantidad">—</div>
+  <!-- SECCIÓN HOY -->
+  <div class="sec-titulo">HOY</div>
+  <div class="hoy-grid">
+
+    <!-- Tarjeta financiera -->
+    <div class="hoy-card">
+      <div class="hoy-card-titulo"><span>💰</span> Resumen Financiero</div>
+      <div class="hoy-metricas">
+        <div class="hoy-metrica">
+          <div class="hoy-metrica-label">Ventas hoy</div>
+          <div class="hoy-metrica-valor verde" id="hoy-ventas"><span class="skeleton"></span></div>
+        </div>
+        <div class="hoy-divider"></div>
+        <div class="hoy-metrica">
+          <div class="hoy-metrica-label">Ganancia hoy</div>
+          <div class="hoy-metrica-valor azul" id="hoy-ganancia"><span class="skeleton"></span></div>
+        </div>
+        <div class="hoy-divider"></div>
+        <div class="hoy-metrica">
+          <div class="hoy-metrica-label">Facturado hoy</div>
+          <div class="hoy-metrica-valor" id="hoy-facturado"><span class="skeleton"></span></div>
+        </div>
+      </div>
     </div>
-    <div class="tarjeta-hoy">
-      <div class="etiqueta">Facturado hoy</div>
-      <div class="valor" id="hoy-facturado" style="font-size:16px">—</div>
+
+    <!-- Tarjeta inventario -->
+    <div class="hoy-card">
+      <div class="hoy-card-titulo"><span>📦</span> Resumen de Inventario</div>
+      <div class="hoy-metricas">
+        <div>
+          <div class="hoy-metrica">
+            <div class="hoy-metrica-label">Bolsas en stock</div>
+            <div class="hoy-metrica-valor verde" id="hoy-bolsas"><span class="skeleton"></span></div>
+          </div>
+          <div class="stock-bar-wrap">
+            <div class="stock-bar-bg">
+              <div class="stock-bar-fill" id="stock-bar"></div>
+            </div>
+            <div class="stock-bar-label" id="stock-bar-label"></div>
+          </div>
+        </div>
+        <div class="hoy-divider"></div>
+        <div>
+          <div class="hoy-metrica-label" style="margin-bottom:6px">Acc. sin stock</div>
+          <div class="acc-alerta">
+            <div class="acc-alerta-icon">⚠️</div>
+            <div>
+              <div class="acc-alerta-num" id="hoy-sin-stock"><span class="skeleton" style="width:30px;height:26px"></span></div>
+              <div class="acc-alerta-text">productos sin stock</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="tarjeta-hoy">
-      <div class="etiqueta">Ganancia hoy</div>
-      <div class="valor" id="hoy-ganancia" style="font-size:16px">—</div>
-    </div>
-    <div class="tarjeta-hoy">
-      <div class="etiqueta">Bolsas en stock</div>
-      <div class="valor" id="hoy-bolsas">—</div>
-    </div>
-    <div class="tarjeta-hoy">
-      <div class="etiqueta">Acc. sin stock</div>
-      <div class="valor rojo" id="hoy-sin-stock">—</div>
-    </div>
+
   </div>
 
-  <!-- Accesos directos a módulos -->
-  <div class="seccion-titulo">Módulos</div>
-  <div class="grid-modulos">
-    <a href="stock-bolsas.html" class="card-modulo">
-      <span class="icono">📦</span>
-      <h2>Stock de Bolsas</h2>
-      <p>Lotes de compra, costos FIFO y ventas con ganancia real</p>
+  <!-- SECCIÓN MÓDULOS -->
+  <div class="sec-titulo">MÓDULOS</div>
+  <div class="modulos-grid">
+
+    <a href="stock-bolsas.html" class="mod-card verde">
+      <div class="mod-icono">📦</div>
+      <div class="mod-titulo">Stock de Bolsas</div>
+      <div class="mod-desc">Lotes de compra, costos FIFO y ventas con ganancia real</div>
+      <div class="mod-metrica">
+        <span class="num" id="mod-bolsas"><span class="skeleton" style="width:60px;height:16px"></span></span>
+        bolsas activas
+      </div>
     </a>
-    <a href="accesorios.html" class="card-modulo azul">
-      <span class="icono">🧸</span>
-      <h2>Accesorios y Farmacia</h2>
-      <p>Accesorios, medicamentos, plásticos, colchonetas y más</p>
+
+    <a href="accesorios.html" class="mod-card azul">
+      <div class="mod-icono">🧸</div>
+      <div class="mod-titulo">Accesorios y Farmacia</div>
+      <div class="mod-desc">Accesorios, medicamentos, plásticos, colchonetas y más</div>
+      <div class="mod-metrica">
+        <span class="num" id="mod-accesorios"><span class="skeleton" style="width:60px;height:16px"></span></span>
+        productos activos
+      </div>
     </a>
-    <a href="lista-precios.html" class="card-modulo naranja">
-      <span class="icono">💲</span>
-      <h2>Lista de Precios</h2>
-      <p>Precios por marca con actualización masiva de costos</p>
+
+    <a href="lista-precios.html" class="mod-card naranja">
+      <div class="mod-icono">💲</div>
+      <div class="mod-titulo">Lista de Precios</div>
+      <div class="mod-desc">Precios por marca con actualización masiva de costos</div>
+      <div class="mod-metrica">
+        <span class="num" id="mod-precios"><span class="skeleton" style="width:60px;height:16px"></span></span>
+        precios cargados
+      </div>
     </a>
-    <a href="vender.html" class="card-modulo naranja">
-      <span class="icono">🛒</span>
-      <h2>Vender</h2>
-      <p>Registrá ventas con descuento real de stock y lotes FIFO</p>
+
+    <a href="vender.html" class="mod-card cian">
+      <div class="mod-icono">🛒</div>
+      <div class="mod-titulo">Vender</div>
+      <div class="mod-desc">Registrá ventas con descuento real de stock y lotes FIFO</div>
+      <div class="mod-metrica">
+        <span class="num" id="mod-ventas"><span class="skeleton" style="width:60px;height:16px"></span></span>
+        transacciones hoy
+      </div>
     </a>
-    <a href="ventas.html" class="card-modulo violeta">
-      <span class="icono">📋</span>
-      <h2>Historial de Ventas</h2>
-      <p>Resumen diario, mensual y exportación a planilla</p>
+
+    <a href="ventas.html" class="mod-card violeta">
+      <div class="mod-icono">📋</div>
+      <div class="mod-titulo">Historial de Ventas</div>
+      <div class="mod-desc">Resumen diario, mensual y exportación a planilla</div>
+      <div class="mod-metrica">
+        <span class="num" id="mod-historial"><span class="skeleton" style="width:60px;height:16px"></span></span>
+        ventas este mes
+      </div>
     </a>
+
   </div>
 
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-<script src="js/firebase-config.js?v=7"></script>
-<script src="js/utils.js?v=7"></script>
-<script src="js/nav-mobile.js?v=7"></script>
 <script>
-  // Cargar resumen del día al abrir el dashboard
-  async function cargarResumenHoy() {
-    const hoy   = new Date();
-    const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 0, 0, 0);
-    const fin    = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59);
+// ── SPLASH SCREEN ──────────────────────────────────────────────
+(function() {
+  const MENSAJES = [
+    'Iniciando...',
+    'Cargando módulos de gestión...',
+    'Conectando con la base de datos...',
+    'Sincronizando inventario...',
+    'Listo'
+  ];
+  const DURACION = 2200 + Math.random() * 800; // 2.2s – 3s
+  const FPS      = 30;
+  const PASOS    = Math.round(DURACION / (1000 / FPS));
 
-    try {
-      // Ventas de hoy
-      const snapVentas = await db.collection('ventas')
-        .where('fecha', '>=', firebase.firestore.Timestamp.fromDate(inicio))
-        .where('fecha', '<=', firebase.firestore.Timestamp.fromDate(fin))
-        .get();
+  let progreso = 0;
+  let paso     = 0;
 
-      const ventas = snapVentas.docs.map(d => d.data());
-      const cantidad   = ventas.length;
-      const facturado  = ventas.reduce((s, v) => s + (v.totalVenta || 0), 0);
-      const ganancia   = ventas.reduce((s, v) => s + (v.ganancia || 0), 0);
+  const bar    = document.getElementById('splash-bar');
+  const status = document.getElementById('splash-status');
+  const pct    = document.getElementById('splash-pct');
+  const splash = document.getElementById('splash-screen');
 
-      document.getElementById('hoy-cantidad').textContent  = cantidad;
-      document.getElementById('hoy-facturado').textContent = formatPrecio(facturado);
-      document.getElementById('hoy-ganancia').textContent  = formatPrecio(ganancia);
-      if (ganancia < 0) document.getElementById('hoy-ganancia').classList.add('rojo');
+  function avanzar() {
+    paso++;
+    // Curva de aceleración: rápido al inicio, lento al final
+    const target = Math.min(100, Math.round((paso / PASOS) * 100));
+    progreso = target;
 
-      // Stock total de bolsas
-      const snapBolsas = await db.collection('productos').get();
-      const stockTotal = snapBolsas.docs.reduce((s, d) => s + (d.data().stockTotal || 0), 0);
-      document.getElementById('hoy-bolsas').textContent = stockTotal;
+    bar.style.width = progreso + '%';
+    pct.textContent = progreso + '%';
 
-      // Accesorios sin stock
-      const snapAcc = await db.collection('accesorios').where('stock', '<=', 0).get();
-      document.getElementById('hoy-sin-stock').textContent = snapAcc.size;
+    // Cambiar mensaje según progreso
+    const idx = Math.floor((progreso / 100) * (MENSAJES.length - 1));
+    status.textContent = MENSAJES[Math.min(idx, MENSAJES.length - 1)];
 
-    } catch(err) {
-      console.error('Error cargando stats:', err);
+    if (progreso < 100) {
+      setTimeout(avanzar, 1000 / FPS);
+    } else {
+      // Llegar al 100% → esperar 300ms → fade out
+      setTimeout(function() {
+        splash.classList.add('fade-out');
+        setTimeout(function() {
+          splash.style.display = 'none';
+        }, 520);
+      }, 300);
     }
   }
 
-  document.addEventListener('DOMContentLoaded', cargarStats);
+  window.addEventListener('load', function() {
+    setTimeout(avanzar, 150);
+  });
+})();
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js?v=13"></script>
+<script src="js/utils.js?v=13"></script>
+<script src="js/nav-mobile.js?v=13"></script>
+<script>
+
+const MAX_BOLSAS = 600; // ajustá según tu capacidad máxima estimada
+
+async function cargarDashboard() {
+  const hoy    = new Date();
+  const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 0, 0, 0);
+  const fin    = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59);
+  const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1, 0, 0, 0);
+
+  try {
+    // ── Ventas de hoy ──────────────────────────────────
+    const snapHoy = await db.collection('ventas')
+      .where('fecha', '>=', firebase.firestore.Timestamp.fromDate(inicio))
+      .where('fecha', '<=', firebase.firestore.Timestamp.fromDate(fin))
+      .get();
+
+    const ventasHoy = snapHoy.docs.map(d => d.data());
+    const cantHoy   = ventasHoy.length;
+    const facturado = ventasHoy.reduce((s, v) => s + (v.totalVenta || 0), 0);
+    const ganancia  = ventasHoy.reduce((s, v) => s + (v.ganancia  || 0), 0);
+
+    // Financiero
+    document.getElementById('hoy-ventas').textContent    = cantHoy;
+    document.getElementById('hoy-facturado').textContent = formatPrecio(facturado);
+    const ganEl = document.getElementById('hoy-ganancia');
+    ganEl.textContent = formatPrecio(ganancia);
+    if (ganancia < 0) { ganEl.classList.remove('azul'); ganEl.classList.add('rojo'); }
+
+    // Módulo Vender
+    document.getElementById('mod-ventas').textContent = cantHoy;
+
+    // ── Ventas del mes ─────────────────────────────────
+    const snapMes = await db.collection('ventas')
+      .where('fecha', '>=', firebase.firestore.Timestamp.fromDate(inicioMes))
+      .get();
+    document.getElementById('mod-historial').textContent = snapMes.size;
+
+    // ── Stock bolsas ───────────────────────────────────
+    const snapBolsas = await db.collection('productos').get();
+    const stockTotal = snapBolsas.docs.reduce((s, d) => s + (d.data().stockTotal || 0), 0);
+    document.getElementById('hoy-bolsas').textContent  = stockTotal;
+    document.getElementById('mod-bolsas').textContent  = stockTotal;
+
+    // Barra de progreso
+    const pct = Math.min(100, Math.round((stockTotal / MAX_BOLSAS) * 100));
+    document.getElementById('stock-bar').style.width      = pct + '%';
+    document.getElementById('stock-bar-label').textContent = pct + '% de capacidad';
+
+    // ── Accesorios ─────────────────────────────────────
+    const snapAcc    = await db.collection('accesorios').get();
+    const accTotal   = snapAcc.size;
+    const accSinStock = snapAcc.docs.filter(d => (d.data().stock || 0) <= 0).length;
+
+    document.getElementById('hoy-sin-stock').textContent  = accSinStock;
+    document.getElementById('mod-accesorios').textContent = accTotal;
+
+    // ── Precios ────────────────────────────────────────
+    const snapPrecios = await db.collection('precios').get();
+    document.getElementById('mod-precios').textContent = snapPrecios.size;
+
+  } catch(err) {
+    console.error('Error cargando dashboard:', err);
+    // Mostrar guiones en caso de error
+    ['hoy-ventas','hoy-facturado','hoy-ganancia','hoy-bolsas','hoy-sin-stock',
+     'mod-bolsas','mod-accesorios','mod-precios','mod-ventas','mod-historial']
+      .forEach(id => { const el = document.getElementById(id); if(el) el.textContent = '—'; });
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', cargarDashboard);
+} else {
+  cargarDashboard();
+}
 </script>
 
 </body>
