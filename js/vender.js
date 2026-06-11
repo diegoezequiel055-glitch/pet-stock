@@ -95,6 +95,7 @@ function inicializarBuscador() {
     if (q.length < 2) { resultados.style.display = 'none'; return; }
     const encontrados = catalogoLocal
       .filter(function(p) { return p._busqueda.includes(normalizar(q)); })
+      .filter(function(p) { return p.stock > 0; })
       .slice(0, 15);
     renderResultados(encontrados);
   });
@@ -364,6 +365,7 @@ function inicializarBuscadorMay() {
     if (q.length < 2) { resultados.style.display = 'none'; return; }
     const encontrados = catalogoLocal
       .filter(function(p) { return p._busqueda.includes(normalizar(q)); })
+      .filter(function(p) { return p.stock > 0; })
       .slice(0, 15);
     renderResultadosMay(encontrados);
   });
@@ -690,9 +692,4 @@ if (document.readyState === 'loading') {
     cargarCatalogo();
   });
 } else {
-  inicializarBuscador();
-  inicializarBuscadorMay();
-  renderCarrito();
-  renderCarritoMayorista();
-  cargarCatalogo();
-}
+  inicializarBuscado
