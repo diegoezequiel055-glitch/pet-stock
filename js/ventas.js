@@ -316,12 +316,10 @@ function renderCierresDiarios(cajaFiltrada, ventasFiltradas) {
 
   ventasFiltradas = ventasFiltradas || [];
 
-  // Ventas nuevas de accesorios/farmacia (desde carrito acc)
   var ventasAccFarm = ventasFiltradas.filter(function(v) {
     return v.tipo === 'accesorio' || v.tipo === 'farmacia';
   });
 
-  // Agrupar por día
   var porDia = {};
 
   cajaFiltrada.forEach(function(r) {
@@ -340,7 +338,7 @@ function renderCierresDiarios(cajaFiltrada, ventasFiltradas) {
   });
 
   if (Object.keys(porDia).length === 0) {
-    contenedor.innerHTML = '<div style="padding:24px;text-align:center;color:#64748b;font-size:14px">Sin registros en el período</div>';
+    contenedor.innerHTML = '<div style="padding:24px;text-align:center;color:#64748b;font-size:14px">Sin registros en el periodo</div>';
     return;
   }
 
@@ -354,25 +352,22 @@ function renderCierresDiarios(cajaFiltrada, ventasFiltradas) {
     var cajaItems   = grupo.caja   || [];
     var ventasItems = grupo.ventas || [];
 
-    // Datos desde caja_petshop (datos antiguos + cierre alimento suelto)
-    var accCaja   = cajaItems.filter(function(r) { return r.tipo === 'accesorios'; });
-    var farmCaja  = cajaItems.filter(function(r) { return r.tipo === 'farmacia'; });
-    var cierres   = cajaItems.filter(function(r) { return r.tipo === 'cierre' || r.tipo === 'otro'; });
+    var accCaja  = cajaItems.filter(function(r) { return r.tipo === 'accesorios'; });
+    var farmCaja = cajaItems.filter(function(r) { return r.tipo === 'farmacia'; });
+    var cierres  = cajaItems.filter(function(r) { return r.tipo === 'cierre' || r.tipo === 'otro'; });
 
     var totalAccCaja  = accCaja.reduce(function(s, r)  { return s + r.monto; }, 0);
-    var totalFarmCaja = farmCaja.reduce(function(s, r)  { return s + r.monto; }, 0);
-    var totalCier     = cierres.reduce(function(s, r)   { return s + r.monto; }, 0);
+    var totalFarmCaja = farmCaja.reduce(function(s, r) { return s + r.monto; }, 0);
+    var totalCier     = cierres.reduce(function(s, r)  { return s + r.monto; }, 0);
 
-    // Datos nuevos desde ventas (carrito acc)
-    var accVen    = ventasItems.filter(function(v) { return v.tipo === 'accesorio'; });
-    var farmVen   = ventasItems.filter(function(v) { return v.tipo === 'farmacia'; });
+    var accVen  = ventasItems.filter(function(v) { return v.tipo === 'accesorio'; });
+    var farmVen = ventasItems.filter(function(v) { return v.tipo === 'farmacia'; });
 
-    var totalAccVen   = accVen.reduce(function(s, v)  { return s + (v.totalVenta || v.total || 0); }, 0);
-    var totalFarmVen  = farmVen.reduce(function(s, v)  { return s + (v.totalVenta || v.total || 0); }, 0);
-    var ganAccVen     = accVen.reduce(function(s, v)  { return s + (v.ganancia || 0); }, 0);
-    var ganFarmVen    = farmVen.reduce(function(s, v)  { return s + (v.ganancia || 0); }, 0);
+    var totalAccVen  = accVen.reduce(function(s, v)  { return s + (v.totalVenta || 0); }, 0);
+    var totalFarmVen = farmVen.reduce(function(s, v) { return s + (v.totalVenta || 0); }, 0);
+    var ganAccVen    = accVen.reduce(function(s, v)  { return s + (v.ganancia   || 0); }, 0);
+    var ganFarmVen   = farmVen.reduce(function(s, v) { return s + (v.ganancia   || 0); }, 0);
 
-    // Ganancias
     var ganAccCaja  = totalAccCaja  * 1.00;
     var ganFarmCaja = totalFarmCaja * 0.60;
     var ganCier     = totalCier     * 0.40;
@@ -398,62 +393,147 @@ function renderCierresDiarios(cajaFiltrada, ventasFiltradas) {
       if (lista.length === 0) return '';
       return lista.map(function(v) {
         return '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #1e3a5f">' +
-          '<span style="color:#94a3b8">' + (v.nombreProducto || v.nombre || '—') + ' × ' + v.cantidad + '</span>' +
-          '<span style="color:#e2e8f0;font-weight:600">' + formatPrecio(v.totalVenta || v.total || 0) + '</span>' +
+          '<span style="color:#94a3b8">' + (v.nombreProducto || '—') + ' x' + v.cantidad + '</span>' +
+          '<span style="color:#e2e8f0;font-weight:600">' + formatPrecio(v.totalVenta || 0) + '</span>' +
         '</div>';
       }).join('');
     }
 
     html += '<div class="dia-acord" style="margin-bottom:8px">';
-    html += '<div onclick="toggleDiaVentas(this)" style="' +
-      'display:flex;justify-content:space-between;align-items:center;' +
-      'background:#1e293b;border:1px solid #334155;' +
-      'border-radius:' + (abierto ? '10px 10px 0 0' : '10px') + ';' +
-      'padding:12px 16px;cursor:pointer;user-select:none;">' +
-      '<span style="font-size:14px;font-weight:700;color:#e2e8f0">📅 ' + diaLabel + '</span>' +
+    html += '<div onclick="toggleDiaVentas(this)" style="display:flex;justify-content:space-between;align-items:center;background:#1e293b;border:1px solid #334155;border-radius:' + (abierto ? '10px 10px 0 0' : '10px') + ';padding:12px 16px;cursor:pointer;user-select:none;">' +
+      '<span style="font-size:14px;font-weight:700;color:#e2e8f0">\U0001f4c5 ' + diaLabel + '</span>' +
       '<span style="display:flex;align-items:center;gap:12px">' +
         '<span style="font-size:13px;font-weight:700;color:#f97316">' + formatPrecio(totalDia) + '</span>' +
         '<span class="dia-arrow" style="color:' + (abierto ? '#4ade80' : '#64748b') + ';font-size:12px">' + (abierto ? '▼' : '▶') + '</span>' +
       '</span>' +
     '</div>';
 
-    html += '<div style="display:' + (abierto ? 'block' : 'none') + ';' +
-      'background:#0d1625;border:1px solid #334155;border-top:none;border-radius:0 0 10px 10px;padding:12px 14px">';
+    html += '<div style="display:' + (abierto ? 'block' : 'none') + ';background:#0d1625;border:1px solid #334155;border-top:none;border-radius:0 0 10px 10px;padding:12px 14px">';
 
-    // Accesorios (nuevo carrito)
     if (accVen.length > 0) {
-      html += '<div style="font-size:12px;font-weight:700;color:#a78bfa;margin-bottom:4px">🧸 Accesorios</div>';
+      html += '<div style="font-size:12px;font-weight:700;color:#a78bfa;margin-bottom:4px">\U0001f9f8 Accesorios</div>';
       html += renderItemsVenta(accVen);
-      html += '<div style="font-size:12px;text-align:right;color:#e2e8f0;font-weight:700;padding-top:4px;margin-bottom:10px">Subtotal: ' + formatPrecio(totalAccVen) + ' · G: ' + formatPrecio(ganAccVen) + '</div>';
+      html += '<div style="font-size:12px;text-align:right;color:#e2e8f0;font-weight:700;padding-top:4px;margin-bottom:10px">Subtotal: ' + formatPrecio(totalAccVen) + ' G: ' + formatPrecio(ganAccVen) + '</div>';
     }
-    // Accesorios (datos viejos de caja)
     if (accCaja.length > 0) {
-      html += '<div style="font-size:12px;font-weight:700;color:#a78bfa;margin-bottom:4px">🧸 Accesorios (anterior)</div>';
+      html += '<div style="font-size:12px;font-weight:700;color:#a78bfa;margin-bottom:4px">\U0001f9f8 Accesorios (anterior)</div>';
       html += renderItemsCaja(accCaja);
       html += '<div style="font-size:12px;text-align:right;color:#e2e8f0;font-weight:700;padding-top:4px;margin-bottom:10px">Subtotal: ' + formatPrecio(totalAccCaja) + '</div>';
     }
-    // Farmacia (nuevo carrito)
     if (farmVen.length > 0) {
-      html += '<div style="font-size:12px;font-weight:700;color:#67e8f9;margin-bottom:4px">💊 Farmacia</div>';
+      html += '<div style="font-size:12px;font-weight:700;color:#67e8f9;margin-bottom:4px">\U0001f48a Farmacia</div>';
       html += renderItemsVenta(farmVen);
-      html += '<div style="font-size:12px;text-align:right;color:#e2e8f0;font-weight:700;padding-top:4px;margin-bottom:10px">Subtotal: ' + formatPrecio(totalFarmVen) + ' · G: ' + formatPrecio(ganFarmVen) + '</div>';
+      html += '<div style="font-size:12px;text-align:right;color:#e2e8f0;font-weight:700;padding-top:4px;margin-bottom:10px">Subtotal: ' + formatPrecio(totalFarmVen) + ' G: ' + formatPrecio(ganFarmVen) + '</div>';
     }
-    // Farmacia (datos viejos de caja)
     if (farmCaja.length > 0) {
-      html += '<div style="font-size:12px;font-weight:700;color:#67e8f9;margin-bottom:4px">💊 Farmacia (anterior)</div>';
+      html += '<div style="font-size:12px;font-weight:700;color:#67e8f9;margin-bottom:4px">\U0001f48a Farmacia (anterior)</div>';
       html += renderItemsCaja(farmCaja);
       html += '<div style="font-size:12px;text-align:right;color:#e2e8f0;font-weight:700;padding-top:4px;margin-bottom:10px">Subtotal: ' + formatPrecio(totalFarmCaja) + '</div>';
     }
-    // Cierre alimento suelto
     if (cierres.length > 0) {
-      html += '<div style="font-size:12px;font-weight:700;color:#fbbf24;margin-bottom:4px">🏪 Alimento suelto</div>';
+      html += '<div style="font-size:12px;font-weight:700;color:#fbbf24;margin-bottom:4px">\U0001f3ea Alimento suelto</div>';
       html += renderItemsCaja(cierres);
       html += '<div style="font-size:12px;text-align:right;color:#e2e8f0;font-weight:700;padding-top:4px;margin-bottom:10px">Subtotal: ' + formatPrecio(totalCier) + '</div>';
     }
 
     html += '<div style="background:#162032;border:1px solid #1e3a5f;border-radius:8px;padding:10px 12px;margin-top:4px">';
-    html += '<div style="font-size:13px;font-weight:700;color:#4ade80;margin-bottom:6px">💰 Ganancia del día: ' + formatPrecio(ganTotal) + '</div>';
-    if (totalAccVen   > 0) html += '<div style="font-size:12px;color:#94a3b8">🧸 Accesorios (real): <span style="color:#a78bfa">'    + formatPrecio(ganAccVen)   + '</span></div>';
-    if (totalFarmVen  > 0) html += '<div style="font-size:12px;color:#94a3b8">💊 Farmacia (real): <span style="color:#67e8f9">'      + formatPrecio(ganFarmVen)  + '</span></div>';
-    if (totalAccCaja  > 0) html += '<div style="font-size:12px;color:#94a3b8">🧸 Accesorios est. (100%): <span style="color:#a78bfa">' + formatPrecio(ganAccCaja) + '</span></div>';
-    if (totalFarmCaja > 0) html += '<div style="font-size:12px;color:#94a3b8">💊 Farmacia est. (60%): <span style
+    html += '<div style="font-size:13px;font-weight:700;color:#4ade80;margin-bottom:6px">\U0001f4b0 Ganancia del dia: ' + formatPrecio(ganTotal) + '</div>';
+    if (ganAccVen    > 0) html += '<div style="font-size:12px;color:#94a3b8">\U0001f9f8 Accesorios (real): <span style="color:#a78bfa">'        + formatPrecio(ganAccVen)   + '</span></div>';
+    if (ganFarmVen   > 0) html += '<div style="font-size:12px;color:#94a3b8">\U0001f48a Farmacia (real): <span style="color:#67e8f9">'          + formatPrecio(ganFarmVen)  + '</span></div>';
+    if (totalAccCaja > 0) html += '<div style="font-size:12px;color:#94a3b8">\U0001f9f8 Accesorios est. (100%): <span style="color:#a78bfa">'  + formatPrecio(ganAccCaja)  + '</span></div>';
+    if (totalFarmCaja> 0) html += '<div style="font-size:12px;color:#94a3b8">\U0001f48a Farmacia est. (60%): <span style="color:#67e8f9">'      + formatPrecio(ganFarmCaja) + '</span></div>';
+    if (totalCier    > 0) html += '<div style="font-size:12px;color:#94a3b8">\U0001f3ea Suelto est. (40%): <span style="color:#fbbf24">'        + formatPrecio(ganCier)     + '</span></div>';
+    html += '</div>';
+
+    html += '</div></div>';
+  });
+
+  contenedor.innerHTML = html || '<div style="padding:24px;text-align:center;color:#64748b;font-size:14px">Sin registros en el periodo</div>';
+}
+
+// =============================================
+// FILTRO RAPIDO POR PERIODO
+// =============================================
+function filtroRapido(periodo) {
+  var hoy   = new Date();
+  var desde = document.getElementById('filtro-desde');
+  var hasta = document.getElementById('filtro-hasta');
+
+  hasta.value = hoyISO();
+
+  if (periodo === 'hoy') {
+    desde.value = hoyISO();
+  } else if (periodo === 'semana') {
+    var lunes = new Date(hoy);
+    lunes.setDate(hoy.getDate() - hoy.getDay() + 1);
+    desde.value = lunes.toISOString().split('T')[0];
+  } else if (periodo === 'mes') {
+    desde.value = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-01';
+  } else if (periodo === 'todo') {
+    desde.value = '';
+    hasta.value = '';
+  }
+
+  aplicarFiltros();
+}
+
+// =============================================
+// EXPORTAR A CSV
+// =============================================
+function exportarCSV() {
+  var tipo  = (document.getElementById('filtro-tipo')  || {}).value || '';
+  var desde = (document.getElementById('filtro-desde') || {}).value || '';
+  var hasta = (document.getElementById('filtro-hasta') || {}).value || '';
+
+  var filtradas = ventasCache.filter(function(v) {
+    if (tipo && v.tipo !== tipo) return false;
+    if (v.fecha) {
+      var fecha = v.fecha.toDate ? v.fecha.toDate() : new Date(v.fecha);
+      if (desde && fecha < new Date(desde + 'T00:00:00')) return false;
+      if (hasta && fecha > new Date(hasta + 'T23:59:59')) return false;
+    }
+    return true;
+  });
+
+  if (filtradas.length === 0) {
+    mostrarAlerta('No hay datos para exportar', 'warning');
+    return;
+  }
+
+  var encabezado = ['Fecha','Tipo','Producto','Cantidad','Precio unit.','Total','Costo','Ganancia','Cliente'];
+  var filas = filtradas.map(function(v) {
+    return [formatFecha(v.fecha), v.tipo, '"' + v.nombre + '"',
+            v.cantidad, v.precio, v.total, v.costo, v.ganancia, '"' + v.cliente + '"'].join(',');
+  });
+
+  var csv  = [encabezado.join(',')].concat(filas).join('\n');
+  var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'ventas_' + hoyISO() + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  mostrarAlerta('Exportacion lista', 'success');
+}
+
+// =============================================
+// INIT
+// =============================================
+function _initVentas() {
+  filtroRapido('mes');
+  cargarVentas();
+  var bv = document.getElementById('buscador-v');
+  var ft = document.getElementById('filtro-tipo');
+  var fd = document.getElementById('filtro-desde');
+  var fh = document.getElementById('filtro-hasta');
+  if (bv) bv.addEventListener('input',  aplicarFiltros);
+  if (ft) ft.addEventListener('change', aplicarFiltros);
+  if (fd) fd.addEventListener('change', aplicarFiltros);
+  if (fh) fh.addEventListener('change', aplicarFiltros);
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _initVentas);
+} else {
+  _initVentas();
+}
