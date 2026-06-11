@@ -692,4 +692,9 @@ if (document.readyState === 'loading') {
     cargarCatalogo();
   });
 } else {
-  inicializarBuscado
+  inicializarBuscador();
+  inicializarBuscadorMay();
+  renderCarrito();
+  renderCarritoMayorista();
+  cargarCatalogo();
+}
