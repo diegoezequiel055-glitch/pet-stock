@@ -10,7 +10,8 @@
 
     /* Resultado del buscador flotante */
     #resultados-busqueda,
-    #resultados-busqueda-may {
+    #resultados-busqueda-may,
+    #resultados-busqueda-acc {
       position: absolute;
       left: 0; right: 0;
       top: calc(100% + 4px);
@@ -49,7 +50,7 @@
     .badge-acc   { background: #dbeafe; color: #1d4ed8; }
 
     /* Carrito compartido */
-    #carrito-lista, #carrito-lista-may { min-height: 60px; }
+    #carrito-lista, #carrito-lista-may, #carrito-lista-acc { min-height: 60px; }
     .carrito-item {
       display: grid;
       grid-template-columns: 1fr auto;
@@ -116,6 +117,16 @@
     #btn-confirmar-may:hover  { background: #9a3412; }
     #btn-confirmar-may:disabled { background: #cbd5e1; cursor: not-allowed; }
 
+    /* Botón confirmar accesorios */
+    #btn-confirmar-acc {
+      background: #7c3aed; color: white; border: none;
+      border-radius: 12px; padding: 13px 24px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      flex-shrink: 0; min-height: 48px; transition: background .15s;
+    }
+    #btn-confirmar-acc:hover  { background: #6d28d9; }
+    #btn-confirmar-acc:disabled { background: #cbd5e1; cursor: not-allowed; }
+
     /* Sección mayorista */
     #seccion-mayorista {
       display: none;
@@ -134,6 +145,27 @@
       letter-spacing: .5px;
       border-bottom: 1px solid #fff7ed;
       background: #fff7ed;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+
+    /* Sección accesorios */
+    #seccion-accesorios {
+      display: none;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.07);
+      border: 2px solid #7c3aed;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .header-accesorios {
+      padding: 12px 16px 8px;
+      font-size: 13px; font-weight: 700;
+      color: #6d28d9;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      border-bottom: 1px solid #f5f3ff;
+      background: #f5f3ff;
       display: flex; justify-content: space-between; align-items: center;
     }
 
@@ -181,12 +213,18 @@
   <!-- ENCABEZADO -->
   <div class="page-header" style="margin-bottom:16px">
     <h1>🛒 Vender</h1>
-    <!-- Botón para abrir carrito mayorista -->
-    <button class="btn-accion-cart"
-      onclick="toggleCarritoMayorista()"
-      style="background:#fff7ed;color:#c2410c;border:1.5px solid #f97316">
-      ➕ Carrito Mayorista
-    </button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn-accion-cart"
+        onclick="toggleCarritoMayorista()"
+        style="background:#fff7ed;color:#c2410c;border:1.5px solid #f97316">
+        📦 Mayorista
+      </button>
+      <button class="btn-accion-cart"
+        onclick="toggleCarritoAccesorios()"
+        style="background:#f5f3ff;color:#6d28d9;border:1.5px solid #7c3aed">
+        🧸 Accesorios
+      </button>
+    </div>
   </div>
 
   <!-- BUSCADOR MINORISTA -->
@@ -219,14 +257,12 @@
     </div>
   </div>
 
-  <!-- CARRITO MAYORISTA — CAMBIO 7 -->
+  <!-- CARRITO MAYORISTA -->
   <div id="seccion-mayorista">
     <div class="header-mayorista">
       <span>📦 CARRITO MAYORISTA <span id="carrito-count-may" style="color:#f97316"></span></span>
       <button class="btn-accion-cart" onclick="vaciarCarritoMay()" style="background:#fff7ed;color:#ef4444;font-size:12px;padding:4px 10px">🗑 Vaciar</button>
     </div>
-
-    <!-- Buscador mayorista -->
     <div style="padding:12px 12px 0;position:relative;" id="wrap-busqueda-may">
       <input
         type="search"
@@ -239,9 +275,7 @@
       >
       <div id="resultados-busqueda-may" style="display:none"></div>
     </div>
-
     <div id="carrito-lista-may" style="padding:10px 12px 0;"></div>
-
     <div class="cart-footer" style="background:#fff7ed;border-top-color:#fed7aa">
       <div>
         <div class="total-label">Total mayorista</div>
@@ -251,11 +285,39 @@
     </div>
   </div>
 
+  <!-- CARRITO ACCESORIOS / FARMACIA -->
+  <div id="seccion-accesorios">
+    <div class="header-accesorios">
+      <span>🧸 ACCESORIOS / FARMACIA <span id="carrito-count-acc" style="color:#7c3aed"></span></span>
+      <button class="btn-accion-cart" onclick="vaciarCarritoAcc()" style="background:#f5f3ff;color:#ef4444;font-size:12px;padding:4px 10px">🗑 Vaciar</button>
+    </div>
+    <div style="padding:12px 12px 0;position:relative;" id="wrap-busqueda-acc">
+      <input
+        type="search"
+        id="input-busqueda-acc"
+        placeholder="Buscar accesorio o farmacia..."
+        autocomplete="off"
+        style="width:100%;padding:10px 14px 10px 40px;border:1.5px solid #7c3aed;border-radius:10px;
+               font-size:14px;background:white url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 fill=%22%237c3aed%22 viewBox=%220 0 16 16%22><path d=%22M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.099zm-5.242 1.406a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z%22/></svg>') no-repeat 12px center;
+               box-sizing:border-box;"
+      >
+      <div id="resultados-busqueda-acc" style="display:none"></div>
+    </div>
+    <div id="carrito-lista-acc" style="padding:10px 12px 0;"></div>
+    <div class="cart-footer" style="background:#f5f3ff;border-top-color:#ddd6fe">
+      <div>
+        <div class="total-label">Total accesorios</div>
+        <div class="total-valor" id="total-carrito-acc" style="color:#6d28d9">$0</div>
+      </div>
+      <button id="btn-confirmar-acc" disabled onclick="confirmarVentaAcc()">✓ Confirmar venta</button>
+    </div>
+  </div>
+
   <!-- CIERRE DIARIO PET SHOP -->
   <div style="background:white;border-radius:12px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.07);margin-top:8px;">
     <div id="toggle-cierre" style="display:flex;justify-content:space-between;align-items:center;" onclick="toggleCierre()">
       <div>
-        <span style="font-size:14px;font-weight:700;color:#1e293b;">🏪 Cierre Diario Pet Shop</span>
+        <span style="font-size:14px;font-weight:700;color:#1e293b;">🏪 Cierre Diario</span>
         <span id="cierre-total-hoy" style="font-size:12px;color:#f97316;font-weight:700;margin-left:10px;"></span>
       </div>
       <span id="cierre-chevron" style="font-size:13px;color:#94a3b8;transition:transform .2s;">▼</span>
@@ -263,18 +325,11 @@
 
     <div id="cierre-body">
       <p style="font-size:12px;color:#94a3b8;margin:10px 0 12px;">
-        Registrá ventas de accesorios, farmacia u otros conceptos. No afecta el stock de bolsas.
+        Registrá el monto de ventas de alimento suelto del día.
       </p>
       <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-        <select id="select-cierre-tipo"
-          style="flex:1;min-width:140px;padding:11px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-weight:600;background:white;">
-          <option value="accesorios">🧸 Accesorios</option>
-          <option value="farmacia">💊 Farmacia</option>
-          <option value="cierre">🏪 Cierre diario</option>
-          <option value="otro">📦 Otro</option>
-        </select>
-        <input type="number" id="input-cierre-monto" placeholder="Monto $" min="0"
-          style="flex:1;min-width:100px;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:15px;">
+        <input type="number" id="input-cierre-monto" placeholder="Monto $ alimento suelto" min="0"
+          style="flex:1;min-width:140px;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:15px;">
       </div>
       <div style="display:flex;gap:8px;margin-bottom:8px;">
         <input type="text" id="input-cierre-notas" placeholder="Nota (opcional)"
@@ -298,7 +353,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 <script src="js/firebase-config.js?v=12"></script>
 <script src="js/utils.js?v=12"></script>
-<script src="js/vender.js?v=14"></script>
+<script src="js/vender.js?v=15"></script>
 <script src="js/nav-mobile.js?v=12"></script>
 
 </body>
