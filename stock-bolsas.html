@@ -4,7 +4,95 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Stock de Bolsas — Pet Stock</title>
-  <link rel="stylesheet" href="css/styles.css?v=9">
+  <link rel="stylesheet" href="css/styles.css?v=22">
+  <style>
+    /* ======================================================
+       BUSCADOR HERO
+    ====================================================== */
+    .buscador-hero {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.09);
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      border: 2px solid var(--verde);
+    }
+    .buscador-hero-inner { display: flex; align-items: center; gap: 10px; }
+    .buscador-icono { font-size: 19px; flex-shrink: 0; }
+    #buscador {
+      flex: 1;
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+      font-size: 17px !important;
+      padding: 3px 0 !important;
+      height: auto !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      color: var(--texto);
+    }
+    #buscador::placeholder { color: #9aa; }
+    .buscador-limpiar {
+      background: none; border: none; font-size: 15px;
+      color: var(--gris); cursor: pointer;
+      padding: 4px 6px; border-radius: 50%; flex-shrink: 0;
+    }
+    .buscador-limpiar:hover { background: var(--gris-claro); }
+
+    /* ======================================================
+       FILTROS ESPECIE
+    ====================================================== */
+    .filtros-especie { display: flex; gap: 7px; margin-top: 10px; flex-wrap: wrap; }
+    .btn-especie {
+      padding: 6px 14px; border-radius: 20px;
+      border: 2px solid var(--borde); background: white;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: all .15s; color: var(--texto);
+    }
+    .btn-especie:hover { border-color: var(--azul-claro); }
+    .btn-especie.activo-todos   { background: #1e293b; color: white; border-color: #1e293b; }
+    .btn-especie.activo-perros  { background: #2563eb; color: white; border-color: #2563eb; }
+    .btn-especie.activo-gatos   { background: #7c3aed; color: white; border-color: #7c3aed; }
+    .btn-especie.activo-ambos   { background: #0f766e; color: white; border-color: #0f766e; }
+
+    /* ======================================================
+       BADGE PESO (verde) y badges row
+    ====================================================== */
+    .badge-peso { color: #4ade80 !important; }
+    .acord-badges-row {
+      display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; align-items: center;
+    }
+
+    /* ======================================================
+       STOCK CAJA dentro del acordeón
+    ====================================================== */
+    .acord-stock-caja {
+      display: flex; flex-direction: column; align-items: center;
+      min-width: 38px; text-align: center;
+    }
+    .acord-stock-etq {
+      font-size: 9px; color: var(--gris);
+      font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+    }
+    .acord-stock { font-size: 22px; font-weight: 800; line-height: 1; }
+
+    /* ======================================================
+       DARK MODE
+    ====================================================== */
+    body.dark .buscador-hero   { background: #1e293b; border-color: #2e7d32; }
+    body.dark #buscador        { color: #f1f5f9; }
+    body.dark #buscador::placeholder { color: #64748b; }
+    body.dark .btn-especie     { background: #1e293b; border-color: #334155; color: #f1f5f9; }
+    body.dark .btn-especie.activo-todos  { background: #0f172a; border-color: #4ade80; }
+    body.dark .btn-especie.activo-perros { background: #1e3a5f; border-color: #2563eb; }
+    body.dark .btn-especie.activo-gatos  { background: #3b1a5f; border-color: #7c3aed; }
+    body.dark .btn-especie.activo-ambos  { background: #0e3d38; border-color: #0f766e; }
+    body.dark .badge-peso      { background: #0f172a !important; }
+
+    /* Botón naranja */
+    .btn-naranja { background: #ea580c; color: white; }
+    .btn-naranja:hover { opacity: .88; }
+  </style>
 </head>
 <body>
 
@@ -29,16 +117,27 @@
     </button>
   </div>
 
-  <!-- Barra de búsqueda y filtro -->
-  <div class="toolbar">
-    <input type="text" id="buscador" placeholder="Buscar por nombre o marca...">
-    <select id="filtro-especie">
-      <option value="">Todas las especies</option>
-      <option value="perros">🐶 Perros</option>
-      <option value="gatos">🐱 Gatos</option>
-      <option value="ambos">Ambos</option>
-    </select>
+  <!-- Buscador hero -->
+  <div class="buscador-hero">
+    <div class="buscador-hero-inner">
+      <span class="buscador-icono">🔍</span>
+      <input type="text" id="buscador" placeholder="Buscar por nombre o marca..." autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="buscador-limpiar" id="btn-limpiar-buscador" style="display:none" onclick="limpiarBuscador()">✕</button>
+    </div>
+    <div class="filtros-especie">
+      <button class="btn-especie activo-todos" id="btn-todos-b"  onclick="filtrarEspecieBolsas('')">🐾 Todos</button>
+      <button class="btn-especie"              id="btn-perros-b" onclick="filtrarEspecieBolsas('perros')">🐶 Perros</button>
+      <button class="btn-especie"              id="btn-gatos-b"  onclick="filtrarEspecieBolsas('gatos')">🐱 Gatos</button>
+      <button class="btn-especie"              id="btn-ambos-b"  onclick="filtrarEspecieBolsas('ambos')">Ambos</button>
+    </div>
   </div>
+  <!-- select oculto — el JS de filtrarProductos lo lee -->
+  <select id="filtro-especie" style="display:none">
+    <option value="">Todas las especies</option>
+    <option value="perros">Perros</option>
+    <option value="gatos">Gatos</option>
+    <option value="ambos">Ambos</option>
+  </select>
 
   <!-- Lista de productos (cards) -->
   <div id="tbody-productos" class="lista-cards">
@@ -226,14 +325,62 @@
 </div>
 
 
+<script>
+  function filtrarEspecieBolsas(val) {
+    document.getElementById('filtro-especie').value = val;
+    document.getElementById('btn-todos-b').className  = 'btn-especie' + (val === ''       ? ' activo-todos'  : '');
+    document.getElementById('btn-perros-b').className = 'btn-especie' + (val === 'perros' ? ' activo-perros' : '');
+    document.getElementById('btn-gatos-b').className  = 'btn-especie' + (val === 'gatos'  ? ' activo-gatos'  : '');
+    document.getElementById('btn-ambos-b').className  = 'btn-especie' + (val === 'ambos'  ? ' activo-ambos'  : '');
+    filtrarProductos();
+  }
+  function limpiarBuscador() {
+    var inp = document.getElementById('buscador');
+    inp.value = '';
+    document.getElementById('btn-limpiar-buscador').style.display = 'none';
+    filtrarProductos();
+    inp.focus();
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('buscador').addEventListener('input', function() {
+      document.getElementById('btn-limpiar-buscador').style.display = this.value ? 'block' : 'none';
+    });
+  });
+</script>
+
+<!-- ===== MODAL: AJUSTE MANUAL DE STOCK ===== -->
+<div class="modal" id="modal-ajuste">
+  <div class="modal-box" style="overflow-y:auto;padding-bottom:90px">
+    <button class="cerrar-modal" onclick="cerrarModal('modal-ajuste')">×</button>
+    <h2>± Ajuste de stock</h2>
+    <p class="subtitulo" id="ajuste-prod-nombre"></p>
+    <form id="form-ajuste">
+      <div class="form-grupo">
+        <label>Cantidad <span style="color:var(--gris);font-size:12px">(positivo para sumar, negativo para descontar)</span></label>
+        <input type="number" id="ajuste-cantidad" placeholder="Ej: 5 ó -3" required>
+      </div>
+      <div class="form-grupo">
+        <label>Motivo (opcional)</label>
+        <input type="text" id="ajuste-motivo" placeholder="Ej: corrección de inventario">
+      </div>
+      <p id="ajuste-stock-actual" style="font-size:13px;color:var(--gris);margin-bottom:12px"></p>
+      <div class="form-acciones">
+        <button type="button" class="btn btn-outline" onclick="cerrarModal('modal-ajuste')">Cancelar</button>
+        <button type="submit" class="btn btn-naranja">Confirmar ajuste</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
 <!-- ===== SCRIPTS ===== -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-<script src="js/firebase-config.js?v=10"></script>
-<script src="js/utils.js?v=10"></script>
-<script src="js/audio.js?v=10"></script>
-<script src="js/stock-bolsas.js?v=10"></script>
-<script src="js/nav-mobile.js?v=10"></script>
+<script src="js/firebase-config.js?v=22"></script>
+<script src="js/utils.js?v=22"></script>
+<script src="js/audio.js?v=22"></script>
+<script src="js/stock-bolsas.js?v=22"></script>
+<script src="js/nav-mobile.js?v=22"></script>
 
 </body>
 </html>
