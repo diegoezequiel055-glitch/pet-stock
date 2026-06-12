@@ -107,7 +107,7 @@ async function cargarAccesorios() {
           });
         });
       } else {
-        if ((data.stock || 0) <= 0) return;
+        if ((data.stock || 0) <= 0) continue;
         items.push({
           id:          doc.id,
           padreId:     null,
@@ -920,4 +920,3 @@ if (document.readyState === 'loading') {
   renderCarritoAcc();
   cargarCatalogo();
   cargarAccesorios();
-}
