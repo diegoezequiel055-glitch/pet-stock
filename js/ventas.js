@@ -31,17 +31,18 @@ async function cargarVentas() {
       // Formato nuevo (flat por producto)
       if (d.nombreProducto) {
         ventasCache.push({
-          id:       doc.id,
-          tipo:     d.tipo           || 'bolsa',
-          nombre:   d.nombreProducto,
-          cantidad: d.cantidad       || 0,
-          precio:   d.precioVenta    || 0,
-          total:    d.totalVenta     || 0,
-          costo:    d.costoFIFO      || d.costo || 0,
-          ganancia: d.ganancia       || 0,
-          cliente:  d.cliente        || '-',
-          audio:    d.origenAudio    || false,
-          fecha:    d.fecha
+          id:         doc.id,
+          tipo:       d.tipo           || 'bolsa',
+          nombre:     d.nombreProducto,
+          cantidad:   d.cantidad       || 0,
+          precio:     d.precioVenta    || 0,
+          total:      d.totalVenta     || 0,
+          costo:      d.costoFIFO      || d.costo || 0,
+          ganancia:   d.ganancia       || 0,
+          cliente:    d.cliente        || '-',
+          audio:      d.origenAudio    || false,
+          productoId: d.productoId     || '',
+          fecha:      d.fecha
         });
         return;
       }
@@ -226,6 +227,9 @@ function renderTablaVentas(lista) {
   var contenedor = document.getElementById('lista-ventas-dias');
   if (!contenedor) return;
 
+  // Excluir accesorios y farmacia — aparecen solo en Cierres Diarios
+  lista = lista.filter(function(v) { return v.tipo !== 'accesorio' && v.tipo !== 'farmacia'; });
+
   if (lista.length === 0) {
     contenedor.innerHTML = '<div style="padding:24px;text-align:center;color:#64748b;font-size:14px">No hay ventas en el período seleccionado</div>';
     return;
@@ -310,12 +314,59 @@ function renderVentaCard(v) {
           formatFecha(v.fecha) + ' · ' + v.cantidad + ' u. × ' + formatPrecio(v.precio) +
         '</div>' +
       '</div>' +
-      '<div style="text-align:right;flex-shrink:0">' +
-        '<div style="font-size:15px;font-weight:700;color:#e2e8f0">' + formatPrecio(v.total) + '</div>' +
-        '<div style="font-size:11px;color:' + gananciaColor + '">G: ' + formatPrecio(v.ganancia) + ' (' + margenPct + '%)</div>' +
+      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">' +
+        '<button onclick="confirmarEliminarVenta(\''+v.id+'\',\''+v.tipo+'\',\''+(v.productoId||'')+'\','+v.cantidad+')" ' +
+          'style="background:transparent;border:1px solid #7f1d1d;border-radius:6px;color:#f87171;font-size:13px;padding:2px 7px;cursor:pointer;line-height:1" ' +
+          'title="Eliminar venta">🗑️</button>' +
+        '<div style="text-align:right">' +
+          '<div style="font-size:15px;font-weight:700;color:#e2e8f0">' + formatPrecio(v.total) + '</div>' +
+          '<div style="font-size:11px;color:' + gananciaColor + '">G: ' + formatPrecio(v.ganancia) + ' (' + margenPct + '%)</div>' +
+        '</div>' +
       '</div>' +
     '</div>' +
   '</div>';
+}
+
+function confirmarEliminarVenta(ventaId, tipo, productoId, cantidad) {
+  if (!confirm('\u00BFEliminar esta venta y reponer el stock?')) return;
+  eliminarVenta(ventaId, tipo, productoId, cantidad);
+}
+
+async function eliminarVenta(ventaId, tipo, productoId, cantidad) {
+  try {
+    var batch = db.batch();
+
+    // Eliminar el documento de ventas
+    var ventaRef = db.collection('ventas').doc(ventaId);
+    batch.delete(ventaRef);
+
+    // Reponer stock según tipo
+    if (tipo === 'accesorio' || tipo === 'farmacia') {
+      // Accesorios: reponer directo en accesorios o variante
+      // productoId puede ser "padreId/variantes/id" o solo "id"
+      var partes = productoId ? productoId.split('/') : [];
+      if (partes.length === 3) {
+        var varRef = db.collection('accesorios').doc(partes[0]).collection('variantes').doc(partes[2]);
+        batch.update(varRef, { stock: firebase.firestore.FieldValue.increment(cantidad) });
+      } else if (partes.length === 1 && partes[0]) {
+        var accRef = db.collection('accesorios').doc(partes[0]);
+        batch.update(accRef, { stock: firebase.firestore.FieldValue.increment(cantidad) });
+      }
+    } else {
+      // Bolsas: reponer stockTotal en productos
+      if (productoId) {
+        var prodRef = db.collection('productos').doc(productoId);
+        batch.update(prodRef, { stockTotal: firebase.firestore.FieldValue.increment(cantidad) });
+      }
+    }
+
+    await batch.commit();
+    mostrarAlerta('Venta eliminada y stock repuesto', 'ok');
+    cargarVentas();
+  } catch (err) {
+    console.error(err);
+    mostrarAlerta('Error al eliminar la venta', 'error');
+  }
 }
 
 function toggleDiaVentas(header) {
@@ -386,8 +437,8 @@ function renderCierresDiarios(cajaFiltrada, ventasFiltradas) {
     var accVen  = ventasItems.filter(function(v) { return v.tipo === 'accesorio'; });
     var farmVen = ventasItems.filter(function(v) { return v.tipo === 'farmacia'; });
 
-    var totalAccVen  = accVen.reduce(function(s, v)  { return s + (v.totalVenta || 0); }, 0);
-    var totalFarmVen = farmVen.reduce(function(s, v) { return s + (v.totalVenta || 0); }, 0);
+    var totalAccVen  = accVen.reduce(function(s, v)  { return s + (v.total || 0); }, 0);
+    var totalFarmVen = farmVen.reduce(function(s, v) { return s + (v.total || 0); }, 0);
     var ganAccVen    = accVen.reduce(function(s, v)  { return s + (v.ganancia   || 0); }, 0);
     var ganFarmVen   = farmVen.reduce(function(s, v) { return s + (v.ganancia   || 0); }, 0);
 
@@ -416,15 +467,15 @@ function renderCierresDiarios(cajaFiltrada, ventasFiltradas) {
       if (lista.length === 0) return '';
       return lista.map(function(v) {
         return '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #1e3a5f">' +
-          '<span style="color:#94a3b8">' + (v.nombreProducto || '—') + ' x' + v.cantidad + '</span>' +
-          '<span style="color:#e2e8f0;font-weight:600">' + formatPrecio(v.totalVenta || 0) + '</span>' +
+          '<span style="color:#94a3b8">' + (v.nombre || '—') + ' x' + v.cantidad + '</span>' +
+          '<span style="color:#e2e8f0;font-weight:600">' + formatPrecio(v.total || 0) + '</span>' +
         '</div>';
       }).join('');
     }
 
     html += '<div class="dia-acord" style="margin-bottom:8px">';
     html += '<div onclick="toggleDiaVentas(this)" style="display:flex;justify-content:space-between;align-items:center;background:#1e293b;border:1px solid #334155;border-radius:' + (abierto ? '10px 10px 0 0' : '10px') + ';padding:12px 16px;cursor:pointer;user-select:none;">' +
-      '<span style="font-size:14px;font-weight:700;color:#e2e8f0">\U0001f4c5 ' + diaLabel + '</span>' +
+      '<span style="font-size:14px;font-weight:700;color:#e2e8f0">📅 ' + diaLabel + '</span>' +
       '<span style="display:flex;align-items:center;gap:12px">' +
         '<span style="font-size:13px;font-weight:700;color:#f97316">' + formatPrecio(totalDia) + '</span>' +
         '<span class="dia-arrow" style="color:' + (abierto ? '#4ade80' : '#64748b') + ';font-size:12px">' + (abierto ? '▼' : '▶') + '</span>' +
@@ -434,38 +485,38 @@ function renderCierresDiarios(cajaFiltrada, ventasFiltradas) {
     html += '<div style="display:' + (abierto ? 'block' : 'none') + ';background:#0d1625;border:1px solid #334155;border-top:none;border-radius:0 0 10px 10px;padding:12px 14px">';
 
     if (accVen.length > 0) {
-      html += '<div style="font-size:12px;font-weight:700;color:#a78bfa;margin-bottom:4px">\U0001f9f8 Accesorios</div>';
+      html += '<div style="font-size:12px;font-weight:700;color:#a78bfa;margin-bottom:4px">🧸 Accesorios</div>';
       html += renderItemsVenta(accVen);
       html += '<div style="font-size:12px;text-align:right;color:#e2e8f0;font-weight:700;padding-top:4px;margin-bottom:10px">Subtotal: ' + formatPrecio(totalAccVen) + ' G: ' + formatPrecio(ganAccVen) + '</div>';
     }
     if (accCaja.length > 0) {
-      html += '<div style="font-size:12px;font-weight:700;color:#a78bfa;margin-bottom:4px">\U0001f9f8 Accesorios (anterior)</div>';
+      html += '<div style="font-size:12px;font-weight:700;color:#a78bfa;margin-bottom:4px">🧸 Accesorios (anterior)</div>';
       html += renderItemsCaja(accCaja);
       html += '<div style="font-size:12px;text-align:right;color:#e2e8f0;font-weight:700;padding-top:4px;margin-bottom:10px">Subtotal: ' + formatPrecio(totalAccCaja) + '</div>';
     }
     if (farmVen.length > 0) {
-      html += '<div style="font-size:12px;font-weight:700;color:#67e8f9;margin-bottom:4px">\U0001f48a Farmacia</div>';
+      html += '<div style="font-size:12px;font-weight:700;color:#67e8f9;margin-bottom:4px">💊 Farmacia</div>';
       html += renderItemsVenta(farmVen);
       html += '<div style="font-size:12px;text-align:right;color:#e2e8f0;font-weight:700;padding-top:4px;margin-bottom:10px">Subtotal: ' + formatPrecio(totalFarmVen) + ' G: ' + formatPrecio(ganFarmVen) + '</div>';
     }
     if (farmCaja.length > 0) {
-      html += '<div style="font-size:12px;font-weight:700;color:#67e8f9;margin-bottom:4px">\U0001f48a Farmacia (anterior)</div>';
+      html += '<div style="font-size:12px;font-weight:700;color:#67e8f9;margin-bottom:4px">💊 Farmacia (anterior)</div>';
       html += renderItemsCaja(farmCaja);
       html += '<div style="font-size:12px;text-align:right;color:#e2e8f0;font-weight:700;padding-top:4px;margin-bottom:10px">Subtotal: ' + formatPrecio(totalFarmCaja) + '</div>';
     }
     if (cierres.length > 0) {
-      html += '<div style="font-size:12px;font-weight:700;color:#fbbf24;margin-bottom:4px">\U0001f3ea Alimento suelto</div>';
+      html += '<div style="font-size:12px;font-weight:700;color:#fbbf24;margin-bottom:4px">🏪 Alimento suelto</div>';
       html += renderItemsCaja(cierres);
       html += '<div style="font-size:12px;text-align:right;color:#e2e8f0;font-weight:700;padding-top:4px;margin-bottom:10px">Subtotal: ' + formatPrecio(totalCier) + '</div>';
     }
 
     html += '<div style="background:#162032;border:1px solid #1e3a5f;border-radius:8px;padding:10px 12px;margin-top:4px">';
-    html += '<div style="font-size:13px;font-weight:700;color:#4ade80;margin-bottom:6px">\U0001f4b0 Ganancia del dia: ' + formatPrecio(ganTotal) + '</div>';
-    if (ganAccVen    > 0) html += '<div style="font-size:12px;color:#94a3b8">\U0001f9f8 Accesorios (real): <span style="color:#a78bfa">'        + formatPrecio(ganAccVen)   + '</span></div>';
-    if (ganFarmVen   > 0) html += '<div style="font-size:12px;color:#94a3b8">\U0001f48a Farmacia (real): <span style="color:#67e8f9">'          + formatPrecio(ganFarmVen)  + '</span></div>';
-    if (totalAccCaja > 0) html += '<div style="font-size:12px;color:#94a3b8">\U0001f9f8 Accesorios est. (100%): <span style="color:#a78bfa">'  + formatPrecio(ganAccCaja)  + '</span></div>';
-    if (totalFarmCaja> 0) html += '<div style="font-size:12px;color:#94a3b8">\U0001f48a Farmacia est. (60%): <span style="color:#67e8f9">'      + formatPrecio(ganFarmCaja) + '</span></div>';
-    if (totalCier    > 0) html += '<div style="font-size:12px;color:#94a3b8">\U0001f3ea Suelto est. (40%): <span style="color:#fbbf24">'        + formatPrecio(ganCier)     + '</span></div>';
+    html += '<div style="font-size:13px;font-weight:700;color:#4ade80;margin-bottom:6px">💰 Ganancia del dia: ' + formatPrecio(ganTotal) + '</div>';
+    if (ganAccVen    > 0) html += '<div style="font-size:12px;color:#94a3b8">🧸 Accesorios (real): <span style="color:#a78bfa">'        + formatPrecio(ganAccVen)   + '</span></div>';
+    if (ganFarmVen   > 0) html += '<div style="font-size:12px;color:#94a3b8">💊 Farmacia (real): <span style="color:#67e8f9">'          + formatPrecio(ganFarmVen)  + '</span></div>';
+    if (totalAccCaja > 0) html += '<div style="font-size:12px;color:#94a3b8">🧸 Accesorios est. (100%): <span style="color:#a78bfa">'  + formatPrecio(ganAccCaja)  + '</span></div>';
+    if (totalFarmCaja> 0) html += '<div style="font-size:12px;color:#94a3b8">💊 Farmacia est. (60%): <span style="color:#67e8f9">'      + formatPrecio(ganFarmCaja) + '</span></div>';
+    if (totalCier    > 0) html += '<div style="font-size:12px;color:#94a3b8">🏪 Suelto est. (40%): <span style="color:#fbbf24">'        + formatPrecio(ganCier)     + '</span></div>';
     html += '</div>';
 
     html += '</div></div>';
