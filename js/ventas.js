@@ -315,7 +315,7 @@ function renderVentaCard(v) {
         '</div>' +
       '</div>' +
       '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">' +
-        '<button onclick="confirmarEliminarVenta(\''+v.id+'\',\''+v.tipo+'\',\''+(v.productoId||'')+'\','+v.cantidad+')" ' +
+        '<button onclick="confirmarEliminarVenta(\'' + v.id + '\',\'' + v.tipo + '\',\'' + (v.productoId||'') + '\',' + v.cantidad + ')" ' +
           'style="background:transparent;border:1px solid #7f1d1d;border-radius:6px;color:#f87171;font-size:13px;padding:2px 7px;cursor:pointer;line-height:1" ' +
           'title="Eliminar venta">🗑️</button>' +
         '<div style="text-align:right">' +
@@ -328,7 +328,7 @@ function renderVentaCard(v) {
 }
 
 function confirmarEliminarVenta(ventaId, tipo, productoId, cantidad) {
-  if (!confirm('\u00BFEliminar esta venta y reponer el stock?')) return;
+  if (!confirm('¿Eliminar esta venta y reponer el stock?')) return;
   eliminarVenta(ventaId, tipo, productoId, cantidad);
 }
 
@@ -466,9 +466,14 @@ function renderCierresDiarios(cajaFiltrada, ventasFiltradas) {
     function renderItemsVenta(lista) {
       if (lista.length === 0) return '';
       return lista.map(function(v) {
-        return '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #1e3a5f">' +
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid #1e3a5f">' +
           '<span style="color:#94a3b8">' + (v.nombre || '—') + ' x' + v.cantidad + '</span>' +
-          '<span style="color:#e2e8f0;font-weight:600">' + formatPrecio(v.total || 0) + '</span>' +
+          '<div style="display:flex;align-items:center;gap:8px">' +
+            '<span style="color:#e2e8f0;font-weight:600">' + formatPrecio(v.total || 0) + '</span>' +
+            '<button onclick="confirmarEliminarVenta(\'' + v.id + '\',\'' + v.tipo + '\',\'' + (v.productoId || '') + '\',' + v.cantidad + ')" ' +
+              'style="background:transparent;border:1px solid #7f1d1d;border-radius:5px;color:#f87171;font-size:11px;padding:2px 5px;cursor:pointer;line-height:1.4" ' +
+              'title="Eliminar">🗑️</button>' +
+          '</div>' +
         '</div>';
       }).join('');
     }
@@ -581,7 +586,7 @@ function exportarCSV() {
   });
 
   var csv  = [encabezado.join(',')].concat(filas).join('\n');
-  var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href     = url;
