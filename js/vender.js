@@ -603,7 +603,8 @@ async function confirmarVentaAcc() {
         totalVenta:     item.precioVenta * item.cantidad,
         costoFIFO:      costoFIFO,
         ganancia:       ganancia,
-        origen:         'carrito_acc'
+        origen:         'carrito_acc',
+        productoId:     item.esVariante ? (item.padreId + '/variantes/' + item.id) : item.id
       });
     });
     await batch.commit();
@@ -722,7 +723,8 @@ async function _procesarVenta(items, tipoVenta) {
         totalVenta:     item.precioVenta * item.cantidad,
         costoFIFO:      op ? op.costoFIFO : 0,
         ganancia:       op ? op.ganancia : 0,
-        origen:         'vender'
+        origen:         'vender',
+        productoId:     item.id
       });
     });
     await batch.commit();
