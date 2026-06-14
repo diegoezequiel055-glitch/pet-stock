@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pet Stock — Inicio</title>
-  <link rel="stylesheet" href="css/styles.css?v=13">
+  <link rel="stylesheet" href="css/styles.css?v=14">
   <style>
     /* ── SPLASH SCREEN ── */
     #splash-screen {
@@ -671,9 +671,9 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-<script src="js/firebase-config.js?v=13"></script>
-<script src="js/utils.js?v=13"></script>
-<script src="js/nav-mobile.js?v=13"></script>
+<script src="js/firebase-config.js?v=14"></script>
+<script src="js/utils.js?v=14"></script>
+<script src="js/nav-mobile.js?v=14"></script>
 <script>
 
 const MAX_BOLSAS = 600; // ajustá según tu capacidad máxima estimada
@@ -817,12 +817,21 @@ async function cargarDashboard() {
       listaElA.innerHTML += '<div class="sinstock-ymas">y ' + restoa + ' más sin stock...</div>';
     }
 
-    // Costo accesorios (solo sin variantes — stock × costo unitario)
-    var costoAcc = snapAcc.docs.reduce(function(s, d) {
+    // Costo accesorios — sin variantes
+    var costoAccSimple = snapAcc.docs.reduce(function(s, d) {
       var dat = d.data();
       if (dat.tieneVariantes) return s;
       return s + ((dat.stock || 0) * (dat.costo || 0));
     }, 0);
+    // Costo accesorios — con variantes (fetch paralelo de subcolecciones)
+    var accsConVariantes = snapAcc.docs.filter(function(d) { return d.data().tieneVariantes; });
+    var varianteCostos   = await Promise.all(accsConVariantes.map(async function(d) {
+      var varSnap = await db.collection('accesorios').doc(d.id).collection('variantes').get();
+      return varSnap.docs.reduce(function(s, vd) {
+        return s + ((vd.data().stock || 0) * (vd.data().costo || 0));
+      }, 0);
+    }));
+    var costoAcc = costoAccSimple + varianteCostos.reduce(function(s, v) { return s + v; }, 0);
 
     // Costo total invertido
     var costoTotal = costoBolsas + costoAcc;
