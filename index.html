@@ -355,6 +355,8 @@
     .sinstock-box { border-radius: 8px; padding: 8px 12px; margin-top: 8px; cursor: pointer; user-select: none; }
     .sinstock-box.rojo    { background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.2); }
     .sinstock-box.amarillo{ background: rgba(251,191,36,.07); border: 1px solid rgba(251,191,36,.2); }
+    .sinstock-box.naranja { background: rgba(251,146,60,.07); border: 1px solid rgba(251,146,60,.25); }
+    .sinstock-num.naranja  { color: #fb923c; }
     .sinstock-header { display: flex; align-items: center; gap: 10px; }
     .sinstock-icon { font-size: 16px; }
     .sinstock-num { font-size: 22px; font-weight: 900; line-height: 1; }
@@ -483,6 +485,19 @@
               <div class="stock-bar-fill" id="stock-bar"></div>
             </div>
             <div class="stock-bar-label" id="stock-bar-label"></div>
+          </div>
+          <!-- ⚡ Stock bajo -->
+          <div class="sinstock-box naranja" id="hoy-bolsas-bajo" style="display:none" onclick="toggleSinStock('bajo')">
+            <div class="sinstock-header">
+              <span class="sinstock-icon">⚡</span>
+              <div>
+                <div class="sinstock-num naranja" id="bolsas-bajo-num">0</div>
+                <div class="sinstock-sub">marcas por agotarse — tocá para ver</div>
+              </div>
+              <span class="sinstock-chevron" id="chevron-bajo">▼</span>
+            </div>
+            <div class="sinstock-body" id="bajo-sinstock-lista"></div>
+            <a href="stock-bolsas.html" class="sinstock-link" onclick="event.stopPropagation()">Ir a Bolsas →</a>
           </div>
           <div class="sinstock-box rojo" id="hoy-bolsas-sinstock" style="display:none" onclick="toggleSinStock('bolsas')">
             <div class="sinstock-header">
@@ -751,6 +766,30 @@ async function cargarDashboard() {
       }
     }
 
+    // Bolsas con stock bajo (0 < stockTotal < stockMinimo)
+    var bolsasStockBajo = snapBolsas.docs.filter(function(d) {
+      var dat = d.data();
+      var min = dat.stockMinimo || 0;
+      return min > 0 && (dat.stockTotal || 0) > 0 && (dat.stockTotal || 0) < min;
+    });
+    if (bolsasStockBajo.length > 0) {
+      document.getElementById('hoy-bolsas-bajo').style.display = 'block';
+      document.getElementById('bolsas-bajo-num').textContent    = bolsasStockBajo.length;
+      var lista4bajo  = bolsasStockBajo.slice(0, 4);
+      var restobajo   = bolsasStockBajo.length - 4;
+      var listaElBajo = document.getElementById('bajo-sinstock-lista');
+      listaElBajo.innerHTML = lista4bajo.map(function(d) {
+        var dat   = d.data();
+        var nom   = (dat.marca || '') + (dat.nombre ? ' — ' + dat.nombre : '');
+        var st    = dat.stockTotal || 0;
+        var mn    = dat.stockMinimo || 0;
+        return '<div class="sinstock-item"><span class="sinstock-nombre">' + nom + '</span><span class="sinstock-pill" style="background:#431407;color:#fb923c">' + st + ' / mín.' + mn + '</span></div>';
+      }).join('');
+      if (restobajo > 0) {
+        listaElBajo.innerHTML += '<div class="sinstock-ymas">y ' + restobajo + ' más por agotarse...</div>';
+      }
+    }
+
     // Costo bolsas (stock × último costo por unidad)
     var costoBolsas = snapBolsas.docs.reduce(function(s, d) {
       var dat = d.data();
@@ -799,7 +838,7 @@ async function cargarDashboard() {
     console.error('Error cargando dashboard:', err);
     ['hoy-ventas','hoy-facturado','hoy-ganancia','hoy-bolsas','hoy-sin-stock',
      'mod-bolsas','mod-accesorios','mod-precios','mod-ventas','mod-historial',
-     'costo-total','costo-bolsas','costo-acc',
+     'costo-total','costo-bolsas','costo-acc','bolsas-bajo-num',
      'categ-bolsas-total','categ-acc-total']
       .forEach(function(id) { var el = document.getElementById(id); if (el) el.textContent = '—'; });
   }
