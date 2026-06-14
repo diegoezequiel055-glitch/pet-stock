@@ -316,6 +316,10 @@
         <label>Unidad / Peso</label>
         <input type="text" id="edit-prod-peso" placeholder="Ej: 15 kg">
       </div>
+      <div class="form-grupo">
+        <label>Stock mínimo <span style="font-size:11px;color:#64748b;font-weight:400">(alerta cuando baja de este número)</span></label>
+        <input type="number" id="edit-prod-minimo" placeholder="Ej: 5" min="0" style="max-width:120px">
+      </div>
       <div class="form-acciones">
         <button type="button" class="btn btn-outline" onclick="cerrarModal('modal-editar-producto')">Cancelar</button>
         <button type="submit" class="btn btn-verde">Guardar cambios</button>
