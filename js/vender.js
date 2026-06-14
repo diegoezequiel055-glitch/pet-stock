@@ -831,7 +831,6 @@ async function cargarResumenCierrePetShop() {
   try {
     const snap = await db.collection('caja_petshop')
       .where('fechaISO', '==', hoy)
-      .orderBy('fecha', 'desc')
       .get();
 
     if (snap.empty) {
@@ -840,7 +839,13 @@ async function cargarResumenCierrePetShop() {
       return;
     }
 
-    const registros = snap.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); });
+    const registros = snap.docs
+      .map(function(d) { return Object.assign({ id: d.id }, d.data()); })
+      .sort(function(a, b) {
+        const fa = a.fecha && a.fecha.toDate ? a.fecha.toDate() : new Date(0);
+        const fb = b.fecha && b.fecha.toDate ? b.fecha.toDate() : new Date(0);
+        return fb - fa;
+      });
     const totalHoy  = registros.reduce(function(s, r) { return s + (r.monto || 0); }, 0);
     document.getElementById('cierre-total-hoy').textContent = 'Total hoy: ' + formatPrecioLocal(totalHoy);
 
