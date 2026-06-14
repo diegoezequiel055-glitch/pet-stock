@@ -1040,3 +1040,10 @@ body.dark .acord-variante { background: #162032; border-color: #334155; }
   border-radius: 5px;
 }
 body.dark .acord-padre-label { background: #1a2f4a; }
+
+/* Fix: texto negro en buscadores de vender.html (fondo blanco en dark mode) */
+body.dark #input-busqueda,
+body.dark #input-busqueda-may,
+body.dark #input-busqueda-acc {
+  color: #1e293b !important;
+}
