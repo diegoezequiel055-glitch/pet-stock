@@ -329,6 +329,59 @@
       0%   { background-position: 200% 0; }
       100% { background-position: -200% 0; }
     }
+
+    /* ── BREAKDOWN POR CATEGORÍA ── */
+    .categ-breakdown { margin-top: 12px; }
+    .categ-breakdown-titulo {
+      font-size: 10px; font-weight: 700; color: #64748b;
+      text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px;
+    }
+    .categ-fila {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;
+    }
+    .categ-fila-info { display: flex; align-items: center; gap: 5px; }
+    .categ-icono { font-size: 12px; }
+    .categ-nombre { font-size: 11px; color: #94a3b8; }
+    .categ-cant { font-size: 10px; color: #475569; }
+    .categ-total { font-size: 12px; font-weight: 700; }
+    .categ-total.verde   { color: #4ade80; }
+    .categ-total.violeta { color: #c084fc; }
+    .categ-bar-bg { height: 4px; background: #1e293b; border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+    .categ-bar-fill { height: 100%; border-radius: 3px; transition: width 1s ease; width: 0%; }
+    .categ-bar-verde   { background: #4ade80; }
+    .categ-bar-violeta { background: #c084fc; }
+
+    /* ── SIN STOCK EXPANDIBLE ── */
+    .sinstock-box { border-radius: 8px; padding: 8px 12px; margin-top: 8px; cursor: pointer; user-select: none; }
+    .sinstock-box.rojo    { background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.2); }
+    .sinstock-box.amarillo{ background: rgba(251,191,36,.07); border: 1px solid rgba(251,191,36,.2); }
+    .sinstock-header { display: flex; align-items: center; gap: 10px; }
+    .sinstock-icon { font-size: 16px; }
+    .sinstock-num { font-size: 22px; font-weight: 900; line-height: 1; }
+    .sinstock-num.rojo    { color: #f87171; }
+    .sinstock-num.amarillo{ color: #fbbf24; }
+    .sinstock-sub { font-size: 10px; color: #64748b; }
+    .sinstock-chevron { font-size: 10px; color: #475569; margin-left: auto; }
+    .sinstock-body { margin-top: 8px; border-top: 1px solid rgba(255,255,255,.05); padding-top: 7px; display: none; }
+    .sinstock-item { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; }
+    .sinstock-nombre { font-size: 10px; color: #cbd5e1; }
+    .sinstock-pill { font-size: 9px; font-weight: 600; padding: 1px 6px; border-radius: 3px; background: #1f0000; color: #ef4444; white-space: nowrap; }
+    .sinstock-ymas { font-size: 10px; color: #475569; margin-top: 4px; }
+    .sinstock-link { display: block; text-align: right; font-size: 10px; color: #4ade80; margin-top: 6px; text-decoration: none; }
+    .sinstock-link:hover { text-decoration: underline; }
+
+    /* ── COSTO TOTAL INVERTIDO ── */
+    .costo-invertido-label { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+    .costo-invertido-valor { font-size: 22px; font-weight: 800; color: #38bdf8; line-height: 1; }
+    .costo-breakdown { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+    .costo-item { background: #0a0f1e; border-radius: 6px; padding: 7px 9px; }
+    .costo-item-tag { font-size: 9px; font-weight: 600; padding: 1px 6px; border-radius: 3px; margin-bottom: 4px; display: inline-block; }
+    .tag-bolsas { background: #1e3a5f; color: #93c5fd; }
+    .tag-acc    { background: #3b1a2e; color: #f9a8d4; }
+    .costo-item-label { font-size: 10px; color: #475569; }
+    .costo-item-valor { font-size: 12px; font-weight: 700; }
+    .costo-item-valor.azul { color: #93c5fd; }
+    .costo-item-valor.rosa { color: #f9a8d4; }
   </style>
 </head>
 <body>
@@ -388,6 +441,29 @@
           <div class="hoy-metrica-label">Facturado hoy</div>
           <div class="hoy-metrica-valor" id="hoy-facturado"><span class="skeleton"></span></div>
         </div>
+        <div class="hoy-divider"></div>
+        <!-- Breakdown por categoría -->
+        <div class="categ-breakdown">
+          <div class="categ-breakdown-titulo">Por categoría hoy</div>
+          <div class="categ-fila">
+            <div class="categ-fila-info">
+              <span class="categ-icono">📦</span>
+              <span class="categ-nombre">Bolsas</span>
+              <span class="categ-cant" id="categ-bolsas-cant"></span>
+            </div>
+            <span class="categ-total verde" id="categ-bolsas-total">—</span>
+          </div>
+          <div class="categ-bar-bg"><div class="categ-bar-fill categ-bar-verde" id="categ-bolsas-bar"></div></div>
+          <div class="categ-fila">
+            <div class="categ-fila-info">
+              <span class="categ-icono">🧸</span>
+              <span class="categ-nombre">Accesorios</span>
+              <span class="categ-cant" id="categ-acc-cant"></span>
+            </div>
+            <span class="categ-total violeta" id="categ-acc-total">—</span>
+          </div>
+          <div class="categ-bar-bg"><div class="categ-bar-fill categ-bar-violeta" id="categ-acc-bar"></div></div>
+        </div>
       </div>
     </div>
 
@@ -395,6 +471,8 @@
     <div class="hoy-card">
       <div class="hoy-card-titulo"><span>📦</span> Resumen de Inventario</div>
       <div class="hoy-metricas">
+
+        <!-- Bolsas en stock + barra + sin stock expandible -->
         <div>
           <div class="hoy-metrica">
             <div class="hoy-metrica-label">Bolsas en stock</div>
@@ -406,18 +484,59 @@
             </div>
             <div class="stock-bar-label" id="stock-bar-label"></div>
           </div>
+          <div class="sinstock-box rojo" id="hoy-bolsas-sinstock" style="display:none" onclick="toggleSinStock('bolsas')">
+            <div class="sinstock-header">
+              <span class="sinstock-icon">🔴</span>
+              <div>
+                <div class="sinstock-num rojo" id="bolsas-sinstock-num">0</div>
+                <div class="sinstock-sub">marcas sin stock — tocá para ver</div>
+              </div>
+              <span class="sinstock-chevron" id="chevron-bolsas">▼</span>
+            </div>
+            <div class="sinstock-body" id="bolsas-sinstock-lista"></div>
+            <a href="stock-bolsas.html" class="sinstock-link" onclick="event.stopPropagation()">Ir a Bolsas →</a>
+          </div>
         </div>
+
         <div class="hoy-divider"></div>
+
+        <!-- Accesorios sin stock expandible -->
         <div>
           <div class="hoy-metrica-label" style="margin-bottom:6px">Acc. sin stock</div>
-          <div class="acc-alerta">
-            <div class="acc-alerta-icon">⚠️</div>
-            <div>
-              <div class="acc-alerta-num" id="hoy-sin-stock"><span class="skeleton" style="width:30px;height:26px"></span></div>
-              <div class="acc-alerta-text">productos sin stock</div>
+          <div class="sinstock-box amarillo" onclick="toggleSinStock('acc')">
+            <div class="sinstock-header">
+              <span class="sinstock-icon">⚠️</span>
+              <div>
+                <div class="sinstock-num amarillo" id="hoy-sin-stock"><span class="skeleton" style="width:30px;height:22px"></span></div>
+                <div class="sinstock-sub">productos sin stock — tocá para ver</div>
+              </div>
+              <span class="sinstock-chevron" id="chevron-acc">▼</span>
+            </div>
+            <div class="sinstock-body" id="acc-sinstock-lista"></div>
+            <a href="accesorios.html" class="sinstock-link" onclick="event.stopPropagation()">Ir a Accesorios →</a>
+          </div>
+        </div>
+
+        <div class="hoy-divider"></div>
+
+        <!-- Costo total invertido -->
+        <div>
+          <div class="costo-invertido-label">Costo total invertido</div>
+          <div class="costo-invertido-valor" id="costo-total"><span class="skeleton" style="width:150px;height:22px"></span></div>
+          <div class="costo-breakdown">
+            <div class="costo-item">
+              <span class="costo-item-tag tag-bolsas">Bolsas</span>
+              <div class="costo-item-label">stock × últ. costo</div>
+              <div class="costo-item-valor azul" id="costo-bolsas"><span class="skeleton" style="width:70px;height:14px"></span></div>
+            </div>
+            <div class="costo-item">
+              <span class="costo-item-tag tag-acc">Accesorios</span>
+              <div class="costo-item-label">stock × costo unit.</div>
+              <div class="costo-item-valor rosa" id="costo-acc"><span class="skeleton" style="width:70px;height:14px"></span></div>
             </div>
           </div>
         </div>
+
       </div>
     </div>
 
@@ -544,69 +663,145 @@
 
 const MAX_BOLSAS = 600; // ajustá según tu capacidad máxima estimada
 
+// Expande/colapsa listas de sin stock
+function toggleSinStock(tipo) {
+  var body    = document.getElementById(tipo + '-sinstock-lista');
+  var chevron = document.getElementById('chevron-' + tipo);
+  if (!body) return;
+  var isOpen = body.style.display === 'block';
+  body.style.display = isOpen ? 'none' : 'block';
+  if (chevron) chevron.textContent = isOpen ? '▼' : '▲';
+}
+
 async function cargarDashboard() {
-  const hoy    = new Date();
-  const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 0, 0, 0);
-  const fin    = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59);
-  const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1, 0, 0, 0);
+  var hoy       = new Date();
+  var inicio    = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 0, 0, 0);
+  var fin       = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59);
+  var inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1, 0, 0, 0);
 
   try {
     // ── Ventas de hoy ──────────────────────────────────
-    const snapHoy = await db.collection('ventas')
+    var snapHoy = await db.collection('ventas')
       .where('fecha', '>=', firebase.firestore.Timestamp.fromDate(inicio))
       .where('fecha', '<=', firebase.firestore.Timestamp.fromDate(fin))
       .get();
 
-    const ventasHoy = snapHoy.docs.map(d => d.data());
-    const cantHoy   = ventasHoy.length;
-    const facturado = ventasHoy.reduce((s, v) => s + (v.totalVenta || 0), 0);
-    const ganancia  = ventasHoy.reduce((s, v) => s + (v.ganancia  || 0), 0);
+    var ventasHoy = snapHoy.docs.map(function(d) { return d.data(); });
+    var cantHoy   = ventasHoy.length;
+    var facturado = ventasHoy.reduce(function(s, v) { return s + (v.totalVenta || 0); }, 0);
+    var ganancia  = ventasHoy.reduce(function(s, v) { return s + (v.ganancia  || 0); }, 0);
 
     // Financiero
     document.getElementById('hoy-ventas').textContent    = cantHoy;
     document.getElementById('hoy-facturado').textContent = formatPrecio(facturado);
-    const ganEl = document.getElementById('hoy-ganancia');
+    var ganEl = document.getElementById('hoy-ganancia');
     ganEl.textContent = formatPrecio(ganancia);
     if (ganancia < 0) { ganEl.classList.remove('azul'); ganEl.classList.add('rojo'); }
 
     // Módulo Vender
     document.getElementById('mod-ventas').textContent = cantHoy;
 
+    // Breakdown por categoría (bolsas vs accesorios)
+    var ventasAcc    = ventasHoy.filter(function(v) { return v.origen === 'carrito_acc'; });
+    var ventasBolsas = ventasHoy.filter(function(v) { return v.origen !== 'carrito_acc'; });
+    var totalCatBolsas = ventasBolsas.reduce(function(s, v) { return s + (v.totalVenta || 0); }, 0);
+    var totalCatAcc    = ventasAcc.reduce(function(s, v)    { return s + (v.totalVenta || 0); }, 0);
+    var grandTotal     = totalCatBolsas + totalCatAcc;
+    var pctCatBolsas   = grandTotal > 0 ? Math.round((totalCatBolsas / grandTotal) * 100) : 0;
+    var pctCatAcc      = grandTotal > 0 ? Math.round((totalCatAcc    / grandTotal) * 100) : 0;
+    document.getElementById('categ-bolsas-cant').textContent  = ventasBolsas.length > 0 ? '· ' + ventasBolsas.length + ' venta' + (ventasBolsas.length === 1 ? '' : 's') : '';
+    document.getElementById('categ-bolsas-total').textContent = formatPrecio(totalCatBolsas);
+    document.getElementById('categ-bolsas-bar').style.width   = pctCatBolsas + '%';
+    document.getElementById('categ-acc-cant').textContent     = ventasAcc.length > 0 ? '· ' + ventasAcc.length + ' venta' + (ventasAcc.length === 1 ? '' : 's') : '';
+    document.getElementById('categ-acc-total').textContent    = formatPrecio(totalCatAcc);
+    document.getElementById('categ-acc-bar').style.width      = pctCatAcc + '%';
+
     // ── Ventas del mes ─────────────────────────────────
-    const snapMes = await db.collection('ventas')
+    var snapMes = await db.collection('ventas')
       .where('fecha', '>=', firebase.firestore.Timestamp.fromDate(inicioMes))
       .get();
     document.getElementById('mod-historial').textContent = snapMes.size;
 
     // ── Stock bolsas ───────────────────────────────────
-    const snapBolsas = await db.collection('productos').get();
-    const stockTotal = snapBolsas.docs.reduce((s, d) => s + (d.data().stockTotal || 0), 0);
-    document.getElementById('hoy-bolsas').textContent  = stockTotal;
-    document.getElementById('mod-bolsas').textContent  = stockTotal;
+    var snapBolsas = await db.collection('productos').get();
+    var stockTotal = snapBolsas.docs.reduce(function(s, d) { return s + (d.data().stockTotal || 0); }, 0);
+    document.getElementById('hoy-bolsas').textContent = stockTotal;
+    document.getElementById('mod-bolsas').textContent = stockTotal;
 
     // Barra de progreso
-    const pct = Math.min(100, Math.round((stockTotal / MAX_BOLSAS) * 100));
-    document.getElementById('stock-bar').style.width      = pct + '%';
+    var pct = Math.min(100, Math.round((stockTotal / MAX_BOLSAS) * 100));
+    document.getElementById('stock-bar').style.width       = pct + '%';
     document.getElementById('stock-bar-label').textContent = pct + '% de capacidad';
 
-    // ── Accesorios ─────────────────────────────────────
-    const snapAcc    = await db.collection('accesorios').get();
-    const accTotal   = snapAcc.size;
-    const accSinStock = snapAcc.docs.filter(d => (d.data().stock || 0) <= 0).length;
+    // Bolsas sin stock — lista expandible
+    var bolsasSinStock = snapBolsas.docs.filter(function(d) { return (d.data().stockTotal || 0) === 0; });
+    if (bolsasSinStock.length > 0) {
+      document.getElementById('hoy-bolsas-sinstock').style.display = 'block';
+      document.getElementById('bolsas-sinstock-num').textContent    = bolsasSinStock.length;
+      var lista4b  = bolsasSinStock.slice(0, 4);
+      var restob   = bolsasSinStock.length - 4;
+      var listaElB = document.getElementById('bolsas-sinstock-lista');
+      listaElB.innerHTML = lista4b.map(function(d) {
+        var dat = d.data();
+        var nom = (dat.marca || '') + (dat.nombre ? ' — ' + dat.nombre : '');
+        return '<div class="sinstock-item"><span class="sinstock-nombre">' + nom + '</span><span class="sinstock-pill">0 bolsas</span></div>';
+      }).join('');
+      if (restob > 0) {
+        listaElB.innerHTML += '<div class="sinstock-ymas">y ' + restob + ' más sin stock...</div>';
+      }
+    }
 
-    document.getElementById('hoy-sin-stock').textContent  = accSinStock;
+    // Costo bolsas (stock × último costo por unidad)
+    var costoBolsas = snapBolsas.docs.reduce(function(s, d) {
+      var dat = d.data();
+      return s + ((dat.stockTotal || 0) * (dat.ultimoCosto || 0));
+    }, 0);
+
+    // ── Accesorios ─────────────────────────────────────
+    var snapAcc  = await db.collection('accesorios').get();
+    var accTotal = snapAcc.size;
+
+    // Accesorios sin stock — lista expandible (excluye los que tienen variantes)
+    var accSinStockDocs = snapAcc.docs.filter(function(d) {
+      return !d.data().tieneVariantes && (d.data().stock || 0) <= 0;
+    });
+    document.getElementById('hoy-sin-stock').textContent  = accSinStockDocs.length;
     document.getElementById('mod-accesorios').textContent = accTotal;
+    var lista4a  = accSinStockDocs.slice(0, 4);
+    var restoa   = accSinStockDocs.length - 4;
+    var listaElA = document.getElementById('acc-sinstock-lista');
+    listaElA.innerHTML = lista4a.map(function(d) {
+      var nom = d.data().nombre || '(sin nombre)';
+      return '<div class="sinstock-item"><span class="sinstock-nombre">' + nom + '</span><span class="sinstock-pill">sin stock</span></div>';
+    }).join('');
+    if (restoa > 0) {
+      listaElA.innerHTML += '<div class="sinstock-ymas">y ' + restoa + ' más sin stock...</div>';
+    }
+
+    // Costo accesorios (solo sin variantes — stock × costo unitario)
+    var costoAcc = snapAcc.docs.reduce(function(s, d) {
+      var dat = d.data();
+      if (dat.tieneVariantes) return s;
+      return s + ((dat.stock || 0) * (dat.costo || 0));
+    }, 0);
+
+    // Costo total invertido
+    var costoTotal = costoBolsas + costoAcc;
+    document.getElementById('costo-total').textContent  = formatPrecio(costoTotal);
+    document.getElementById('costo-bolsas').textContent = formatPrecio(costoBolsas);
+    document.getElementById('costo-acc').textContent    = formatPrecio(costoAcc);
 
     // ── Precios ────────────────────────────────────────
-    const snapPrecios = await db.collection('precios').get();
+    var snapPrecios = await db.collection('precios').get();
     document.getElementById('mod-precios').textContent = snapPrecios.size;
 
   } catch(err) {
     console.error('Error cargando dashboard:', err);
-    // Mostrar guiones en caso de error
     ['hoy-ventas','hoy-facturado','hoy-ganancia','hoy-bolsas','hoy-sin-stock',
-     'mod-bolsas','mod-accesorios','mod-precios','mod-ventas','mod-historial']
-      .forEach(id => { const el = document.getElementById(id); if(el) el.textContent = '—'; });
+     'mod-bolsas','mod-accesorios','mod-precios','mod-ventas','mod-historial',
+     'costo-total','costo-bolsas','costo-acc',
+     'categ-bolsas-total','categ-acc-total']
+      .forEach(function(id) { var el = document.getElementById(id); if (el) el.textContent = '—'; });
   }
 }
 
