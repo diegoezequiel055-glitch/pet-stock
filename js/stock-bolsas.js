@@ -1,5 +1,5 @@
 // =============================================
-// stock-bolsas.js — v22
+// stock-bolsas.js — v23
 // Stock de bolsas con agrupación por marca
 // =============================================
 
