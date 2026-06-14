@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pet Stock — Inicio</title>
-  <link rel="stylesheet" href="css/styles.css?v=14">
+  <link rel="stylesheet" href="css/styles.css?v=15">
   <style>
     /* ── SPLASH SCREEN ── */
     #splash-screen {
@@ -384,6 +384,17 @@
     .costo-item-valor { font-size: 12px; font-weight: 700; }
     .costo-item-valor.azul { color: #93c5fd; }
     .costo-item-valor.rosa { color: #f9a8d4; }
+
+    /* ── WhatsApp resumen del día ── */
+    .btn-wsp-resumen { background:#166534; color:#86efac; border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; transition:background .2s; margin:12px 0 0; }
+    .btn-wsp-resumen:hover { background:#15803d; }
+    #wsp-resumen-panel { background:#0f2027; border:1px solid #166534; border-radius:10px; padding:12px; margin-top:10px; display:none; }
+    #wsp-resumen-texto { width:100%; background:#0a1929; color:#86efac; border:1px solid #1e3a2f; border-radius:6px; padding:10px; font-size:11px; font-family:monospace; resize:none; height:170px; outline:none; line-height:1.6; }
+    .wsp-botones { display:flex; gap:8px; margin-top:8px; }
+    .btn-copiar-res { background:#1e3a5f; color:#93c5fd; border:none; border-radius:6px; padding:7px 0; font-size:12px; font-weight:700; cursor:pointer; flex:1; transition:background .2s; }
+    .btn-wsp-abrir  { background:#166534; color:#86efac; border:none; border-radius:6px; padding:7px 0; font-size:12px; font-weight:700; cursor:pointer; flex:1; transition:background .2s; }
+    .btn-copiar-res:hover { background:#1e40af; }
+    .btn-wsp-abrir:hover  { background:#15803d; }
   </style>
 </head>
 <body>
@@ -465,6 +476,15 @@
             <span class="categ-total violeta" id="categ-acc-total">—</span>
           </div>
           <div class="categ-bar-bg"><div class="categ-bar-fill categ-bar-violeta" id="categ-acc-bar"></div></div>
+        </div>
+      </div>
+      <!-- Compartir resumen por WhatsApp -->
+      <button class="btn-wsp-resumen" onclick="compartirResumenWhatsApp()">📤 Compartir resumen del día</button>
+      <div id="wsp-resumen-panel">
+        <textarea id="wsp-resumen-texto" readonly></textarea>
+        <div class="wsp-botones">
+          <button class="btn-copiar-res" onclick="copiarResumenWhatsApp()">📋 Copiar texto</button>
+          <button class="btn-wsp-abrir"  onclick="abrirResumenEnWhatsApp()">💬 Abrir WhatsApp</button>
         </div>
       </div>
     </div>
@@ -667,16 +687,74 @@
     setTimeout(avanzar, 150);
   });
 })();
+// ── WhatsApp: resumen del día ────────────────────────────────────────────
+function compartirResumenWhatsApp() {
+  if (!_dashResumen) { alert('Esperá que cargue el dashboard primero.'); return; }
+  var panel = document.getElementById('wsp-resumen-panel');
+  var visible = panel.style.display === 'block';
+  if (!visible) {
+    document.getElementById('wsp-resumen-texto').value = generarTextoResumen(_dashResumen);
+  }
+  panel.style.display = visible ? 'none' : 'block';
+}
+
+function generarTextoResumen(d) {
+  var dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  var f    = d.fecha;
+  var dd   = String(f.getDate()).padStart(2,'0');
+  var mm   = String(f.getMonth()+1).padStart(2,'0');
+  var yyyy = f.getFullYear();
+  var fechaStr = dias[f.getDay()] + ' ' + dd + '/' + mm + '/' + yyyy;
+  var lineas = [
+    '🐾 *Pet Stock — Cierre del día*',
+    '📅 ' + fechaStr,
+    '━━━━━━━━━━━━━━━',
+    '',
+    '🛒 Ventas: *' + d.cantHoy + '*',
+    '💰 Facturado: *' + formatPrecio(d.facturado) + '*',
+    '📈 Ganancia: *' + formatPrecio(d.ganancia) + '*'
+  ];
+  if (d.cantHoy > 0) {
+    lineas.push('');
+    lineas.push('📦 Bolsas: ' + d.ventasBolsasCant + ' venta' + (d.ventasBolsasCant !== 1 ? 's' : '') + ' · ' + formatPrecio(d.totalBolsas));
+    lineas.push('🧸 Accesorios: ' + d.ventasAccCant + ' venta' + (d.ventasAccCant !== 1 ? 's' : '') + ' · ' + formatPrecio(d.totalAcc));
+  }
+  lineas.push('');
+  lineas.push('━━━━━━━━━━━━━━━');
+  lineas.push('_Pet Stock_ 🐾');
+  return lineas.join('\n');
+}
+
+function copiarResumenWhatsApp() {
+  var texto = document.getElementById('wsp-resumen-texto').value;
+  navigator.clipboard.writeText(texto).then(function() {
+    var btn = document.querySelector('.btn-copiar-res');
+    var orig = btn.textContent;
+    btn.textContent = '✅ ¡Copiado!';
+    setTimeout(function() { btn.textContent = orig; }, 2000);
+  }).catch(function() {
+    document.getElementById('wsp-resumen-texto').select();
+    document.execCommand('copy');
+  });
+}
+
+function abrirResumenEnWhatsApp() {
+  var texto = document.getElementById('wsp-resumen-texto').value;
+  window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank');
+}
+
+
 </script>
 
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-<script src="js/firebase-config.js?v=14"></script>
-<script src="js/utils.js?v=14"></script>
-<script src="js/nav-mobile.js?v=14"></script>
+<script src="js/firebase-config.js?v=15"></script>
+<script src="js/utils.js?v=15"></script>
+<script src="js/nav-mobile.js?v=15"></script>
 <script>
 
 const MAX_BOLSAS = 600; // ajustá según tu capacidad máxima estimada
+    var _dashResumen = null; // datos para compartir por WhatsApp
 
 // Expande/colapsa listas de sin stock
 function toggleSinStock(tipo) {
@@ -724,6 +802,18 @@ async function cargarDashboard() {
     var grandTotal     = totalCatBolsas + totalCatAcc;
     var pctCatBolsas   = grandTotal > 0 ? Math.round((totalCatBolsas / grandTotal) * 100) : 0;
     var pctCatAcc      = grandTotal > 0 ? Math.round((totalCatAcc    / grandTotal) * 100) : 0;
+    // Guardar datos para compartir por WhatsApp
+    _dashResumen = {
+      fecha:            hoy,
+      cantHoy:          cantHoy,
+      facturado:        facturado,
+      ganancia:         ganancia,
+      ventasBolsasCant: ventasBolsas.length,
+      totalBolsas:      totalCatBolsas,
+      ventasAccCant:    ventasAcc.length,
+      totalAcc:         totalCatAcc
+    };
+
     document.getElementById('categ-bolsas-cant').textContent  = ventasBolsas.length > 0 ? '· ' + ventasBolsas.length + ' venta' + (ventasBolsas.length === 1 ? '' : 's') : '';
     document.getElementById('categ-bolsas-total').textContent = formatPrecio(totalCatBolsas);
     document.getElementById('categ-bolsas-bar').style.width   = pctCatBolsas + '%';
