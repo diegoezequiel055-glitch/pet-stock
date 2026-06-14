@@ -81,8 +81,13 @@ function renderTablaProductos(lista) {
     var totalColor = totalStock <= 5 ? '#ef4444' : totalStock <= 20 ? '#f97316' : '#4ade80';
 
     var productosHTML = prods.map(function(p) {
-      var stock = p.stockTotal != null ? p.stockTotal : 0;
-      var stockColor = stock <= 5 ? '#ef4444' : stock <= 15 ? '#f97316' : '#4ade80';
+      var stock  = p.stockTotal != null ? p.stockTotal : 0;
+      var minimo = p.stockMinimo || 0;
+      var stockBajo  = minimo > 0 && stock > 0 && stock < minimo;
+      var stockColor = stock === 0 ? '#ef4444' : stockBajo ? '#fb923c' : '#4ade80';
+      var bajoBadge  = stockBajo
+        ? ' <span style="background:#431407;color:#fb923c;font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px">⚡ bajo</span>'
+        : '';
       var espBadge = p.especie
         ? '<span style="background:#374151;color:#d1d5db;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600">' + p.especie + '</span>'
         : '';
@@ -97,7 +102,7 @@ function renderTablaProductos(lista) {
       return '<div style="border-bottom:1px solid #1e3a5f">'
         + '<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;cursor:pointer;background:#1e293b;transition:background .12s" onclick="toggleSubPanel(this)">'
           + '<div style="flex:1;min-width:0">'
-            + '<div style="color:#e2e8f0;font-size:13px;font-weight:600;margin-bottom:4px">' + (p.nombre || '') + '</div>'
+            + '<div style="color:#e2e8f0;font-size:13px;font-weight:600;margin-bottom:4px">' + (p.nombre || '') + bajoBadge + '</div>'
             + '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">'
               + espBadge + pesoBadge + costoStr
             + '</div>'
@@ -303,9 +308,10 @@ function abrirModalEditarProducto(id) {
   productoSeleccionadoId = id;
   var p = productosCache.find(x => x.id === id);
   if (!p) return;
-  document.getElementById('edit-prod-marca').value  = p.marca || '';
-  document.getElementById('edit-prod-nombre').value = p.nombre || '';
-  document.getElementById('edit-prod-peso').value   = p.unidadPeso || '';
+  document.getElementById('edit-prod-marca').value    = p.marca || '';
+  document.getElementById('edit-prod-nombre').value   = p.nombre || '';
+  document.getElementById('edit-prod-peso').value     = p.unidadPeso || '';
+  document.getElementById('edit-prod-minimo').value   = p.stockMinimo || '';
   abrirModal('modal-editar-producto');
 }
 
@@ -314,10 +320,12 @@ async function guardarEdicionProducto(e) {
   var btn = e.target.querySelector('button[type="submit"]');
   btn.disabled = true;
   try {
+    var minimoVal = parseInt(document.getElementById('edit-prod-minimo').value, 10);
     await db.collection('productos').doc(productoSeleccionadoId).update({
-      marca:      document.getElementById('edit-prod-marca').value.trim(),
-      nombre:     document.getElementById('edit-prod-nombre').value.trim(),
-      unidadPeso: document.getElementById('edit-prod-peso').value.trim()
+      marca:       document.getElementById('edit-prod-marca').value.trim(),
+      nombre:      document.getElementById('edit-prod-nombre').value.trim(),
+      unidadPeso:  document.getElementById('edit-prod-peso').value.trim(),
+      stockMinimo: isNaN(minimoVal) ? 0 : minimoVal
     });
     mostrarAlerta('Producto actualizado', 'success');
     cerrarModal('modal-editar-producto');
