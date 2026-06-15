@@ -169,10 +169,16 @@ function renderBloqueMarca(bloque, productos) {
           <strong>${bloque}</strong>
           <span class="marca-badge">${total} producto${total !== 1 ? 's' : ''}</span>
         </div>
-        <button class="btn btn-sm btn-naranja"
-          onclick="event.stopPropagation(); abrirModalActualizarMarca('${bloqueEsc}')">
-          📈 ${isMobile ? 'Costos' : 'Actualizar costos'}
-        </button>
+        <div style="display:flex;gap:5px;flex-shrink:0">
+          <button class="btn btn-sm btn-naranja"
+            onclick="event.stopPropagation(); abrirModalActualizarMarca('${bloqueEsc}')">
+            📈 ${isMobile ? 'Costos' : 'Actualizar costos'}
+          </button>
+          <button class="btn btn-sm" style="background:#25d366;color:white;border-color:#25d366"
+            onclick="event.stopPropagation(); compartirMarcaWA('${bloqueEsc}')" title="WhatsApp">
+            📲 WA
+          </button>
+        </div>
       </div>
       <div class="marca-contenido" style="display:none">`;
 
@@ -709,6 +715,7 @@ function renderBloqueMarcaCliente(marca, productos) {
   const ordenados = [...productos].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
   const total     = productos.length;
   const isMobile  = window.innerWidth < 769;
+  const marcaEsc  = marca.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
   const cabecera = `
     <div class="bloque-marca">
@@ -718,6 +725,10 @@ function renderBloqueMarcaCliente(marca, productos) {
           <strong>${marca}</strong>
           <span class="marca-badge">${total} producto${total !== 1 ? 's' : ''}</span>
         </div>
+        <button class="btn btn-sm" style="background:#25d366;color:white;border-color:#25d366;flex-shrink:0"
+          onclick="event.stopPropagation(); compartirMarcaWA('${marcaEsc}')" title="WhatsApp">
+          📲 WA
+        </button>
       </div>
       <div class="marca-contenido" style="display:none">`;
   const cierre = `</div></div>`;
@@ -959,6 +970,48 @@ function _getListaFiltrada() {
 }
 
 // =============================================
+
+// =============================================
+// COMPARTIR MARCA POR WHATSAPP
+// =============================================
+function compartirMarcaWA(bloque) {
+  var filtroEspecie = (document.getElementById('filtro-especie-p') || {}).value || '';
+  var esCliente     = vistaActual === 'cliente';
+
+  var productos = preciosCache
+    .filter(function(p) {
+      var okBloque  = (p.bloque || p.marca) === bloque;
+      var okEspecie = !filtroEspecie || p.especie === filtroEspecie || p.especie === 'ambos';
+      return okBloque && okEspecie;
+    })
+    .sort(function(a, b) { return (a.nombre || '').localeCompare(b.nombre || ''); });
+
+  if (productos.length === 0) {
+    mostrarAlerta('No hay productos para compartir con el filtro activo', 'warning');
+    return;
+  }
+
+  var fecha       = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  var especieTag  = filtroEspecie === 'perros' ? ' 🐶 Perros' : filtroEspecie === 'gatos' ? ' 🐱 Gatos' : ' 🐾';
+  var texto       = '*' + bloque + '*' + especieTag + '\nPet Stock · ' + fecha + '\n────────────────\n';
+
+  productos.forEach(function(p) {
+    var peso  = p.unidadPeso ? ' ' + p.unidadPeso : '';
+    var linea = '• ' + p.nombre + peso + '\n';
+    if (esCliente) {
+      linea += '  Min: ' + formatPrecio(p.precioMinorista) + '\n';
+    } else {
+      linea += '  Min: ' + formatPrecio(p.precioMinorista);
+      if (p.precioMayorista > 0) linea += ' / May: ' + formatPrecio(p.precioMayorista);
+      linea += '\n';
+    }
+    texto += linea;
+  });
+
+  var url = 'https://wa.me/?text=' + encodeURIComponent(texto);
+  window.open(url, '_blank');
+}
+
 // INIT
 // =============================================
 function _initPrecios() {
