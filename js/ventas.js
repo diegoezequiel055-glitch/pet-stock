@@ -254,7 +254,7 @@ function renderTablaVentas(lista) {
     var grupo   = porDia[dia];
     var count   = grupo.ventas.length;
     var total   = grupo.total;
-    var abierto = idx === 0;
+    var abierto = false;
 
     html += '<div class="dia-acord" style="margin-bottom:8px">';
     html += '<div onclick="toggleDiaVentas(this)" style="' +
@@ -424,7 +424,7 @@ function renderCierresDiarios(cajaFiltrada, ventasFiltradas) {
 
   dias.forEach(function(diaISO, idx) {
     var grupo   = porDia[diaISO];
-    var abierto = idx === 0;
+    var abierto = false;
 
     var cajaItems   = grupo.caja   || [];
     var ventasItems = grupo.ventas || [];
