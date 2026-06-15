@@ -5,6 +5,7 @@
 // ---- ESTADO ----
 var ventasCache = [];
 var cajaCache   = [];
+var grafico7diasInstance = null;
 
 // =============================================
 // CARGAR DATOS
@@ -145,6 +146,8 @@ function aplicarFiltros() {
   renderTablaVentas(filtradas);
   renderResumen(filtradas, filtradaCaja);
   renderCierresDiarios(filtradaCaja, filtradas);
+  renderRankingVentas(filtradas);
+  renderGrafico7Dias();
 
   var cont = document.getElementById('contador-ventas');
   if (cont) cont.textContent = filtradas.length + ' resultado' + (filtradas.length !== 1 ? 's' : '');
@@ -528,6 +531,158 @@ function renderCierresDiarios(cajaFiltrada, ventasFiltradas) {
   });
 
   contenedor.innerHTML = html || '<div style="padding:24px;text-align:center;color:#64748b;font-size:14px">Sin registros en el periodo</div>';
+}
+
+
+// =============================================
+// RENDER RANKING TOP 10 LO MÁS VENDIDO
+// =============================================
+function renderRankingVentas(lista) {
+  var contenedor = document.getElementById('ranking-ventas');
+  if (!contenedor) return;
+
+  // Solo bolsas (excluir accesorios y farmacia)
+  var bolsas = lista.filter(function(v) {
+    return v.tipo !== 'accesorio' && v.tipo !== 'farmacia';
+  });
+
+  if (bolsas.length === 0) {
+    contenedor.innerHTML = '<div style="padding:16px;text-align:center;color:#64748b;font-size:13px">Sin ventas en el período seleccionado</div>';
+    return;
+  }
+
+  // Agrupar por nombre de producto
+  var porProducto = {};
+  bolsas.forEach(function(v) {
+    var key = v.nombre || 'Sin nombre';
+    if (!porProducto[key]) porProducto[key] = { nombre: key, cantidad: 0, monto: 0 };
+    porProducto[key].cantidad += (v.cantidad || 0);
+    porProducto[key].monto   += (v.total    || 0);
+  });
+
+  var ranking = Object.values(porProducto)
+    .sort(function(a, b) { return b.cantidad - a.cantidad; })
+    .slice(0, 10);
+
+  var maxCant  = ranking[0] ? ranking[0].cantidad : 1;
+  var medallas = ['🥇','🥈','🥉'];
+  var barColors = ['#f97316','#fb923c','#fdba74','#4ade80','#4ade80','#4ade80','#4ade80','#4ade80','#4ade80','#4ade80'];
+
+  var html = '';
+  ranking.forEach(function(p, i) {
+    var pct   = Math.round((p.cantidad / maxCant) * 100);
+    var label = i < 3 ? medallas[i] : String(i + 1);
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1e3a5f;">' +
+      '<span style="font-size:' + (i < 3 ? '16' : '12') + 'px;min-width:22px;text-align:center;color:#94a3b8;">' + label + '</span>' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="font-size:13px;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + p.nombre + '</div>' +
+        '<div style="height:5px;background:#0f172a;border-radius:3px;margin-top:5px;">' +
+          '<div style="height:100%;width:' + pct + '%;background:' + barColors[i] + ';border-radius:3px;"></div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="text-align:right;flex-shrink:0;">' +
+        '<div style="font-size:13px;font-weight:700;color:#e2e8f0;">' + p.cantidad + ' u.</div>' +
+        '<div style="font-size:11px;color:#64748b;">' + formatPrecio(p.monto) + '</div>' +
+      '</div>' +
+    '</div>';
+  });
+
+  contenedor.innerHTML = html;
+}
+
+// =============================================
+// RENDER GRÁFICO ÚLTIMOS 7 DÍAS
+// =============================================
+function renderGrafico7Dias() {
+  var canvas = document.getElementById('grafico-7dias');
+  if (!canvas) return;
+  if (typeof Chart === 'undefined') { setTimeout(renderGrafico7Dias, 500); return; }
+
+  // Calcular los últimos 7 días
+  var hoy    = new Date();
+  var dias   = [];
+  var labels = [];
+  for (var i = 6; i >= 0; i--) {
+    var d = new Date(hoy);
+    d.setDate(hoy.getDate() - i);
+    var iso = d.toISOString().slice(0, 10);
+    dias.push(iso);
+    labels.push(d.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric' }));
+  }
+
+  var facturadoPorDia = {};
+  var gananciaPorDia  = {};
+  dias.forEach(function(d) { facturadoPorDia[d] = 0; gananciaPorDia[d] = 0; });
+
+  // Sumar ventas de bolsas/accesorios/farmacia registradas en la colección ventas
+  ventasCache.forEach(function(v) {
+    if (!v.fecha) return;
+    var fecha = v.fecha.toDate ? v.fecha.toDate() : new Date(v.fecha);
+    var iso   = fecha.toISOString().slice(0, 10);
+    if (facturadoPorDia.hasOwnProperty(iso)) {
+      facturadoPorDia[iso] += (v.total    || 0);
+      gananciaPorDia[iso]  += (v.ganancia || 0);
+    }
+  });
+
+  // Sumar caja_petshop con ganancia estimada por tipo
+  cajaCache.forEach(function(r) {
+    var iso = r.fechaISO || '';
+    if (!iso && r.fecha && r.fecha.toDate) iso = r.fecha.toDate().toISOString().slice(0, 10);
+    if (facturadoPorDia.hasOwnProperty(iso)) {
+      facturadoPorDia[iso] += (r.monto || 0);
+      var ganEst = r.tipo === 'farmacia'   ? (r.monto || 0) * 0.60
+                 : r.tipo === 'accesorios' ? (r.monto || 0) * 1.00
+                 : (r.monto || 0) * 0.40;
+      gananciaPorDia[iso] += ganEst;
+    }
+  });
+
+  var dataFact = dias.map(function(d) { return Math.round(facturadoPorDia[d]); });
+  var dataGan  = dias.map(function(d) { return Math.round(gananciaPorDia[d]);  });
+
+  if (grafico7diasInstance) { grafico7diasInstance.destroy(); grafico7diasInstance = null; }
+
+  grafico7diasInstance = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'Facturado',     data: dataFact, backgroundColor: '#4ade80', borderRadius: 4, barPercentage: 0.55, categoryPercentage: 0.8 },
+        { label: 'Ganancia est.', data: dataGan,  backgroundColor: '#f97316', borderRadius: 4, barPercentage: 0.55, categoryPercentage: 0.8 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#94a3b8', font: { size: 11 }, boxWidth: 12, padding: 12 } },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) { return ' ' + formatPrecio(ctx.raw); }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: '#94a3b8', font: { size: 11 } }
+        },
+        y: {
+          grid: { color: 'rgba(148,163,184,0.08)' },
+          ticks: {
+            color: '#94a3b8',
+            font: { size: 10 },
+            callback: function(v) {
+              if (v >= 1000000) return '$' + (v / 1000000).toFixed(1) + 'M';
+              if (v >= 1000)    return '$' + Math.round(v / 1000) + 'k';
+              return '$' + v;
+            }
+          }
+        }
+      }
+    }
+  });
 }
 
 // =============================================
