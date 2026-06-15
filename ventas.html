@@ -193,11 +193,14 @@
     <span class="contador-resultados" id="contador-ventas"></span>
   </div>
 
-  <!-- Gráfico últimos 7 días -->
-  <div class="seccion-titulo">📊 Últimos 7 días</div>
-  <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:14px 16px;margin-bottom:20px;">
+  <!-- Gráfico últimos 7 días — ACORDEÓN -->
+  <div class="seccion-titulo" onclick="toggleSeccionVentas('panel-grafico','arr-grafico')" style="cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;">
+    <span>📊 Últimos 7 días</span>
+    <span id="arr-grafico" style="color:#64748b;font-size:11px;margin-right:4px;">▶</span>
+  </div>
+  <div id="panel-grafico" style="display:none;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:14px 16px;margin-bottom:20px;margin-top:8px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-      <span style="font-size:13px;color:#94a3b8;">Siempre muestra los últimos 7 días</span>
+      <span style="font-size:13px;color:#94a3b8;">Últimos 7 días</span>
       <div style="display:flex;gap:12px;">
         <span style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;background:#4ade80;border-radius:2px;display:inline-block"></span>Facturado</span>
         <span style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;background:#f97316;border-radius:2px;display:inline-block"></span>Ganancia est.</span>
@@ -208,10 +211,15 @@
     </div>
   </div>
 
-  <!-- Ranking lo más vendido -->
-  <div class="seccion-titulo">🏆 Lo más vendido</div>
-  <div id="ranking-ventas" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:14px 16px;margin-bottom:20px;">
-    <div style="padding:16px;text-align:center;color:#64748b">Cargando...</div>
+  <!-- Ranking lo más vendido — ACORDEÓN -->
+  <div class="seccion-titulo" onclick="toggleSeccionVentas('panel-ranking','arr-ranking')" style="cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;">
+    <span>🏆 Lo más vendido</span>
+    <span id="arr-ranking" style="color:#64748b;font-size:11px;margin-right:4px;">▶</span>
+  </div>
+  <div id="panel-ranking" style="display:none;margin-bottom:20px;margin-top:8px;">
+    <div id="ranking-ventas" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:14px 16px;">
+      <div style="padding:16px;text-align:center;color:#64748b">Cargando...</div>
+    </div>
   </div>
 
   <!-- Acordeones por día — ventas de bolsas (CAMBIO 5) -->
@@ -237,6 +245,20 @@
 <script src="js/nav-mobile.js?v=13"></script>
 
 <script>
+  // Toggle acordeones de gráfico y ranking
+  function toggleSeccionVentas(panelId, arrowId) {
+    var panel = document.getElementById(panelId);
+    var arrow = document.getElementById(arrowId);
+    if (!panel) return;
+    var estaAbierto = panel.style.display !== 'none';
+    panel.style.display = estaAbierto ? 'none' : 'block';
+    if (arrow) arrow.textContent = estaAbierto ? '▶' : '▼';
+    // Al abrir el gráfico, re-renderizar para que Chart.js calcule bien el tamaño
+    if (!estaAbierto && panelId === 'panel-grafico' && typeof renderGrafico7Dias === 'function') {
+      setTimeout(renderGrafico7Dias, 60);
+    }
+  }
+
   // Marcar botón de filtro rápido activo
   document.querySelectorAll('.filtros-rapidos button').forEach(function(btn) {
     btn.addEventListener('click', function() {
