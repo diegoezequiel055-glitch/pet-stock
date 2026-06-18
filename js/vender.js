@@ -196,13 +196,17 @@ function inicializarBuscador() {
 
 function buscarEnCatalogos(q) {
   const qNorm = normalizar(q);
-  const bolsas = catalogoLocal
+  const todosBolsas = catalogoLocal
     .filter(function(p) { return p._busqueda.includes(qNorm); })
     .filter(function(p) { return p.stock > 0; });
-  const accesorios = catalogoAccesorios
+  const todosAccesorios = catalogoAccesorios
     .filter(function(p) { return p._busqueda.includes(qNorm); })
     .filter(function(p) { return p.stock > 0; });
-  return [...bolsas, ...accesorios].slice(0, 15);
+  // Reservamos cupo para accesorios/farmacia (hasta 7) para que no queden
+  // afuera cuando hay muchas bolsas que coinciden con la busqueda.
+  const accesorios = todosAccesorios.slice(0, 7);
+  const bolsas = todosBolsas.slice(0, 15 - accesorios.length);
+  return [...bolsas, ...accesorios];
 }
 
 function badgeInfoTipo(tipo) {
