@@ -1,19 +1,28 @@
 // ============================================================
-//  vender.js v15
-//  NUEVO: Carrito Accesorios/Farmacia con descuento de stock real
-//  FIX: clavePrecio ignora unidadPeso (precios siempre tiene "")
-//  FIX: color input precio mas llamativo
-//  FIX: ocultar sin stock en ambos buscadores
+//  vender.js v17
+//  REDISEÑO: Carrito único unificado (bolsas + accesorios + farmacia)
+//  con switch Minorista/Mayorista y buscador único.
+//  FIX respecto a v15: confirmarVentaUnica() re-chequea stock FRESCO
+//  contra Firestore (bolsas y accesorios/farmacia) antes de confirmar.
 // ============================================================
 
 // -----------------------------------------------------------
 // ESTADO LOCAL
 // -----------------------------------------------------------
-let catalogoLocal      = [];
-let carrito            = [];
-let carritoMayorista   = [];
-let catalogoAccesorios = [];
-let carritoAccesorios  = [];
+let modoVenta          = 'minorista'; // 'minorista' | 'mayorista'
+let catalogoLocal      = [];          // bolsas (colección productos)
+let catalogoAccesorios = [];          // accesorios/farmacia (colección accesorios [+ variantes])
+let carritoMinorista    = [];
+let carritoMayorista    = [];
+
+function carritoActivo() {
+  return modoVenta === 'minorista' ? carritoMinorista : carritoMayorista;
+}
+
+function setCarritoActivo(nuevoArray) {
+  if (modoVenta === 'minorista') carritoMinorista = nuevoArray;
+  else carritoMayorista = nuevoArray;
+}
 
 // -----------------------------------------------------------
 // CARGA DEL CATÁLOGO (BOLSAS) DESDE FIRESTORE
@@ -52,8 +61,6 @@ async function cargarCatalogo() {
     });
     catalogoLocal = [...bolsas];
     mostrarEstadoCarga(false);
-    restaurarCarritoDesdeCache('carritoMinorista', carrito,          renderCarrito);
-    restaurarCarritoDesdeCache('carritoMayorista', carritoMayorista, renderCarritoMayorista);
   } catch (err) {
     console.error('Error cargando catalogo:', err);
     mostrarEstadoCarga(false, 'Error al cargar. Recarga la pagina.');
@@ -74,13 +81,13 @@ function mostrarEstadoCarga(cargando, error) {
     input.placeholder = error;
     input.disabled    = false;
   } else {
-    input.placeholder = 'Buscar producto o accesorio...';
+    input.placeholder = 'Buscar bolsa, accesorio o farmacia...';
     input.disabled    = false;
   }
 }
 
 // -----------------------------------------------------------
-// CARGA DE ACCESORIOS DESDE FIRESTORE
+// CARGA DE ACCESORIOS / FARMACIA DESDE FIRESTORE
 // -----------------------------------------------------------
 async function cargarAccesorios() {
   try {
@@ -129,18 +136,54 @@ async function cargarAccesorios() {
 }
 
 // -----------------------------------------------------------
-// BUSCADOR MINORISTA
+// SWITCH MINORISTA / MAYORISTA
+// -----------------------------------------------------------
+function cambiarModo(modo) {
+  if (modo !== 'minorista' && modo !== 'mayorista') return;
+  modoVenta = modo;
+
+  const btnMin = document.getElementById('switch-minorista');
+  const btnMay = document.getElementById('switch-mayorista');
+  if (btnMin) btnMin.classList.toggle('activo', modo === 'minorista');
+  if (btnMay) {
+    btnMay.classList.toggle('activo', modo === 'mayorista');
+    btnMay.classList.toggle('modo-mayorista', modo === 'mayorista');
+  }
+
+  // Re-renderizar carrito activo
+  renderCarritoUnico();
+
+  // Re-renderizar resultados de búsqueda si hay una búsqueda activa
+  const input = document.getElementById('input-busqueda');
+  const resultados = document.getElementById('resultados-busqueda');
+  if (input && resultados && resultados.style.display === 'block' && input.value.trim().length >= 2) {
+    const encontrados = buscarEnCatalogos(input.value.trim());
+    renderResultados(encontrados);
+  }
+}
+
+// -----------------------------------------------------------
+// PRECIOS SEGÚN MODO
+// -----------------------------------------------------------
+function precioSegunModo(item) {
+  if (item.tipo === 'bolsa') {
+    return modoVenta === 'mayorista' ? (item.precioMay || 0) : (item.precioVenta || 0);
+  }
+  // Accesorios/farmacia: precio único (no hay distinción minorista/mayorista en el doc)
+  return item.precioVenta || 0;
+}
+
+// -----------------------------------------------------------
+// BUSCADOR ÚNICO (bolsas + accesorios + farmacia)
 // -----------------------------------------------------------
 function inicializarBuscador() {
   const input      = document.getElementById('input-busqueda');
   const resultados = document.getElementById('resultados-busqueda');
+  if (!input) return;
   input.addEventListener('input', function() {
     const q = input.value.trim();
     if (q.length < 2) { resultados.style.display = 'none'; return; }
-    const encontrados = catalogoLocal
-      .filter(function(p) { return p._busqueda.includes(normalizar(q)); })
-      .filter(function(p) { return p.stock > 0; })
-      .slice(0, 15);
+    const encontrados = buscarEnCatalogos(q);
     renderResultados(encontrados);
   });
   document.addEventListener('click', function(e) {
@@ -149,6 +192,23 @@ function inicializarBuscador() {
       resultados.style.display = 'none';
     }
   });
+}
+
+function buscarEnCatalogos(q) {
+  const qNorm = normalizar(q);
+  const bolsas = catalogoLocal
+    .filter(function(p) { return p._busqueda.includes(qNorm); })
+    .filter(function(p) { return p.stock > 0; });
+  const accesorios = catalogoAccesorios
+    .filter(function(p) { return p._busqueda.includes(qNorm); })
+    .filter(function(p) { return p.stock > 0; });
+  return [...bolsas, ...accesorios].slice(0, 15);
+}
+
+function badgeInfoTipo(tipo) {
+  if (tipo === 'bolsa')    return { clase: 'badge-bolsa',    label: 'Bolsa' };
+  if (tipo === 'farmacia') return { clase: 'badge-farmacia', label: 'Farmacia' };
+  return { clase: 'badge-acc', label: 'Accesorio' };
 }
 
 function renderResultados(items) {
@@ -160,16 +220,17 @@ function renderResultados(items) {
   }
   contenedor.innerHTML = items.map(function(p) {
     const sinStock  = (p.stock || 0) <= 0;
-    const precioStr = p.precioVenta > 0
-      ? formatPrecioLocal(p.precioVenta)
+    const precio    = precioSegunModo(p);
+    const precioStr = precio > 0
+      ? formatPrecioLocal(precio)
       : '<span style="color:#16a34a;font-size:12px">Editable</span>';
+    const badge = badgeInfoTipo(p.tipo);
+    const claveItem = p.tipo + '|' + p.id + '|' + (p.padreId || '');
     return '<div class="resultado-item ' + (sinStock ? 'resultado-sin-stock' : '') + '"' +
-      (sinStock ? '' : ' onclick="agregarAlCarrito(\'' + p.id + '\')"') + '>' +
+      (sinStock ? '' : ' onclick="agregarAlCarritoUnico(\'' + claveItem.replace(/'/g, "\\'") + '\')"') + '>' +
       '<div>' +
         '<div class="resultado-nombre">' +
-          '<span class="badge-tipo ' + (p.tipo === 'bolsa' ? 'badge-bolsa' : 'badge-acc') + '">' +
-            (p.tipo === 'bolsa' ? 'Bolsa' : 'Acc') +
-          '</span> ' + p.nombre +
+          '<span class="badge-tipo ' + badge.clase + '">' + badge.label + '</span> ' + p.nombre +
         '</div>' +
         '<div class="resultado-detalle">' + p.detalle +
           (sinStock
@@ -184,76 +245,127 @@ function renderResultados(items) {
 }
 
 // -----------------------------------------------------------
-// CARRITO MINORISTA
+// HELPERS DE IDENTIDAD DE ITEM (tipo + id [+ padreId])
 // -----------------------------------------------------------
-function agregarAlCarrito(productoId) {
-  const producto = catalogoLocal.find(function(p) { return p.id === productoId; });
+function buscarEnCatalogoPorClave(tipo, id, padreId) {
+  if (tipo === 'bolsa') {
+    return catalogoLocal.find(function(p) { return p.tipo === 'bolsa' && p.id === id; });
+  }
+  return catalogoAccesorios.find(function(p) {
+    return p.id === id && (p.padreId || null) === (padreId || null);
+  });
+}
+
+function mismoItem(c, tipo, id, padreId) {
+  return c.tipo === tipo && c.id === id && (c.padreId || null) === (padreId || null);
+}
+
+// -----------------------------------------------------------
+// CARRITO ÚNICO — agregar / cantidad / quitar / vaciar
+// -----------------------------------------------------------
+function agregarAlCarritoUnico(claveItem) {
+  const partes   = claveItem.split('|');
+  const tipo     = partes[0];
+  const id       = partes[1];
+  const padreId  = partes[2] || null;
+
+  const producto = buscarEnCatalogoPorClave(tipo, id, padreId);
   if (!producto || producto.stock <= 0) return;
+
   document.getElementById('resultados-busqueda').style.display = 'none';
   document.getElementById('input-busqueda').value = '';
-  const existente = carrito.find(function(c) { return c.id === productoId; });
+
+  const carrito = carritoActivo();
+  const existente = carrito.find(function(c) { return mismoItem(c, tipo, id, padreId); });
   if (existente) {
     if (existente.cantidad < producto.stock) existente.cantidad++;
     else { mostrarToast('No hay mas stock disponible'); return; }
   } else {
-    carrito.push(Object.assign({}, producto, { cantidad: 1 }));
+    carrito.push(Object.assign({}, producto, {
+      tipo:        producto.tipo,
+      padreId:     producto.padreId || null,
+      esVariante:  !!producto.esVariante,
+      cantidad:    1,
+      precioVenta: precioSegunModo(producto)
+    }));
   }
-  renderCarrito();
+  renderCarritoUnico();
 }
 
-function cambiarCantidad(productoId, delta) {
-  const item     = carrito.find(function(c) { return c.id === productoId; });
+function cambiarCantidadUnico(tipo, id, padreId, delta) {
+  const carrito = carritoActivo();
+  const item    = carrito.find(function(c) { return mismoItem(c, tipo, id, padreId); });
   if (!item) return;
-  const maxStock = (catalogoLocal.find(function(p) { return p.id === productoId; }) || {}).stock || 9999;
-  item.cantidad  = Math.max(0, Math.min(item.cantidad + delta, maxStock));
-  if (item.cantidad === 0) carrito = carrito.filter(function(c) { return c.id !== productoId; });
-  renderCarrito();
+  const enCatalogo = buscarEnCatalogoPorClave(tipo, id, padreId);
+  const maxStock   = enCatalogo ? (enCatalogo.stock || 9999) : 9999;
+  item.cantidad    = Math.max(0, Math.min(item.cantidad + delta, maxStock));
+  if (item.cantidad === 0) {
+    setCarritoActivo(carrito.filter(function(c) { return !mismoItem(c, tipo, id, padreId); }));
+  }
+  renderCarritoUnico();
 }
 
-function quitarDelCarrito(productoId) {
-  carrito = carrito.filter(function(c) { return c.id !== productoId; });
-  renderCarrito();
+function quitarDelCarritoUnico(tipo, id, padreId) {
+  const carrito = carritoActivo();
+  setCarritoActivo(carrito.filter(function(c) { return !mismoItem(c, tipo, id, padreId); }));
+  renderCarritoUnico();
 }
 
-function actualizarPrecioCarrito(productoId, valor) {
-  const item = carrito.find(function(c) { return c.id === productoId; });
+function actualizarPrecioCarritoUnico(tipo, id, padreId, valor) {
+  const carrito = carritoActivo();
+  const item = carrito.find(function(c) { return mismoItem(c, tipo, id, padreId); });
   if (item) item.precioVenta = parseFloat(valor) || 0;
-  actualizarTotal();
-  guardarCache('carritoMinorista', carrito);
+  renderCarritoUnico();
 }
 
-function vaciarCarrito() {
-  carrito = [];
-  renderCarrito();
-  localStorage.removeItem('carritoMinorista');
+function vaciarCarritoUnico() {
+  setCarritoActivo([]);
+  renderCarritoUnico();
+  guardarCache();
 }
 
-function renderCarrito() {
+// -----------------------------------------------------------
+// RENDER DEL CARRITO ÚNICO
+// -----------------------------------------------------------
+function claveJsItem(item) {
+  // Escapamos comillas simples para uso seguro dentro de atributos onclick
+  return "'" + item.tipo + "','" + item.id + "'," + (item.padreId ? "'" + item.padreId + "'" : 'null');
+}
+
+function renderCarritoUnico() {
+  const carrito = carritoActivo();
   const lista   = document.getElementById('carrito-lista');
   const count   = document.getElementById('carrito-count');
   const btnConf = document.getElementById('btn-confirmar');
+  if (!lista) return;
+
   if (carrito.length === 0) {
     lista.innerHTML = '<div style="text-align:center;padding:24px 16px;display:flex;flex-direction:column;align-items:center;gap:8px">' +
       '<div style="font-size:40px">🛒</div>' +
       '<div style="font-size:14px;font-weight:700;color:#1e293b">Carrito vacio</div>' +
       '<div style="font-size:13px;color:#94a3b8;max-width:240px;text-align:center">Usa el buscador para agregar productos</div>' +
     '</div>';
-    count.textContent = '';
-    document.getElementById('total-carrito').textContent = '$0';
+    if (count) count.textContent = '';
+    const totalEl = document.getElementById('total-carrito');
+    if (totalEl) totalEl.textContent = '$0';
     if (btnConf) btnConf.disabled = true;
-    guardarCache('carritoMinorista', carrito);
+    guardarCache();
     return;
   }
-  count.textContent = '(' + carrito.length + ')';
+
+  if (count) count.textContent = '(' + carrito.length + ')';
   if (btnConf) btnConf.disabled = false;
+
   lista.innerHTML = carrito.map(function(item) {
-    const subtotal   = (item.precioVenta || 0) * item.cantidad;
+    const subtotal = (item.precioVenta || 0) * item.cantidad;
+    const badge    = badgeInfoTipo(item.tipo);
+    const claveJs  = claveJsItem(item);
     const precioHtml = '<input type="number" min="0" value="' + (item.precioVenta || '') + '" placeholder="$ precio"' +
-      ' onchange="actualizarPrecioCarrito(\'' + item.id + '\', this.value)"' +
+      ' onchange="actualizarPrecioCarritoUnico(' + claveJs + ', this.value)"' +
       ' style="width:110px;padding:5px 10px;background:#dcfce7;border:2px solid #16a34a;border-radius:8px;font-size:14px;font-weight:800;color:#166534">';
     return '<div class="carrito-item">' +
       '<div>' +
-        '<div class="ci-nombre">' + item.nombre + '</div>' +
+        '<div class="ci-nombre"><span class="badge-tipo ' + badge.clase + '">' + badge.label + '</span> ' + item.nombre + '</div>' +
         '<div class="ci-detalle">' + item.detalle + '</div>' +
         '<div style="margin-top:5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
           precioHtml +
@@ -261,413 +373,50 @@ function renderCarrito() {
         '</div>' +
       '</div>' +
       '<div class="ci-controles">' +
-        '<button class="ci-btn" onclick="cambiarCantidad(\'' + item.id + '\', -1)">−</button>' +
+        '<button class="ci-btn" onclick="cambiarCantidadUnico(' + claveJs + ', -1)">−</button>' +
         '<span class="ci-cant">' + item.cantidad + '</span>' +
-        '<button class="ci-btn" onclick="cambiarCantidad(\'' + item.id + '\', 1)">+</button>' +
-        '<button class="ci-btn eliminar" onclick="quitarDelCarrito(\'' + item.id + '\')">🗑</button>' +
+        '<button class="ci-btn" onclick="cambiarCantidadUnico(' + claveJs + ', 1)">+</button>' +
+        '<button class="ci-btn eliminar" onclick="quitarDelCarritoUnico(' + claveJs + ')">🗑</button>' +
       '</div>' +
     '</div>';
   }).join('');
-  actualizarTotal();
-  guardarCache('carritoMinorista', carrito);
+
+  actualizarTotalUnico();
+  guardarCache();
 }
 
-function actualizarTotal() {
+function actualizarTotalUnico() {
+  const carrito = carritoActivo();
   const total = carrito.reduce(function(s, c) { return s + (c.precioVenta || 0) * c.cantidad; }, 0);
-  document.getElementById('total-carrito').textContent = formatPrecioLocal(total);
+  const totalEl = document.getElementById('total-carrito');
+  if (totalEl) totalEl.textContent = formatPrecioLocal(total);
 }
 
 // -----------------------------------------------------------
-// CARRITO MAYORISTA
+// CONFIRMAR VENTA ÚNICA (bolsas + accesorios/farmacia, un solo batch)
 // -----------------------------------------------------------
-function toggleCarritoMayorista() {
-  const sec = document.getElementById('seccion-mayorista');
-  if (!sec) return;
-  const visible = sec.style.display !== 'none' && sec.style.display !== '';
-  sec.style.display = visible ? 'none' : 'block';
-}
-
-function agregarAlCarritoMayorista(productoId) {
-  const producto = catalogoLocal.find(function(p) { return p.id === productoId; });
-  if (!producto || producto.stock <= 0) return;
-  document.getElementById('resultados-busqueda-may').style.display = 'none';
-  document.getElementById('input-busqueda-may').value = '';
-  const existente = carritoMayorista.find(function(c) { return c.id === productoId; });
-  if (existente) {
-    if (existente.cantidad < producto.stock) existente.cantidad++;
-    else { mostrarToast('Sin stock'); return; }
-  } else {
-    carritoMayorista.push(Object.assign({}, producto, {
-      cantidad:       1,
-      precioVenta:    producto.precioMay || 0,
-      precioEditable: true
-    }));
-  }
-  renderCarritoMayorista();
-}
-
-function cambiarCantidadMay(productoId, delta) {
-  const item     = carritoMayorista.find(function(c) { return c.id === productoId; });
-  if (!item) return;
-  const maxStock = (catalogoLocal.find(function(p) { return p.id === productoId; }) || {}).stock || 9999;
-  item.cantidad  = Math.max(0, Math.min(item.cantidad + delta, maxStock));
-  if (item.cantidad === 0) carritoMayorista = carritoMayorista.filter(function(c) { return c.id !== productoId; });
-  renderCarritoMayorista();
-}
-
-function quitarDelCarritoMay(productoId) {
-  carritoMayorista = carritoMayorista.filter(function(c) { return c.id !== productoId; });
-  renderCarritoMayorista();
-}
-
-function actualizarPrecioMay(productoId, valor) {
-  const item = carritoMayorista.find(function(c) { return c.id === productoId; });
-  if (item) item.precioVenta = parseFloat(valor) || 0;
-  actualizarTotalMay();
-  guardarCache('carritoMayorista', carritoMayorista);
-}
-
-function vaciarCarritoMay() {
-  carritoMayorista = [];
-  renderCarritoMayorista();
-  localStorage.removeItem('carritoMayorista');
-}
-
-function renderCarritoMayorista() {
-  const lista   = document.getElementById('carrito-lista-may');
-  const count   = document.getElementById('carrito-count-may');
-  const btnConf = document.getElementById('btn-confirmar-may');
-  if (carritoMayorista.length === 0) {
-    lista.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">Carrito mayorista vacio</div>';
-    count.textContent = '';
-    document.getElementById('total-carrito-may').textContent = '$0';
-    if (btnConf) btnConf.disabled = true;
-    guardarCache('carritoMayorista', carritoMayorista);
-    return;
-  }
-  count.textContent = '(' + carritoMayorista.length + ')';
-  if (btnConf) btnConf.disabled = false;
-  lista.innerHTML = carritoMayorista.map(function(item) {
-    const subtotal   = (item.precioVenta || 0) * item.cantidad;
-    const precioHtml = '<input type="number" min="0" value="' + (item.precioVenta || '') + '" placeholder="$ precio"' +
-      ' onchange="actualizarPrecioMay(\'' + item.id + '\', this.value)"' +
-      ' style="width:110px;padding:5px 10px;background:#fff7ed;border:2px solid #f97316;border-radius:8px;font-size:14px;font-weight:800;color:#c2410c">';
-    return '<div class="carrito-item">' +
-      '<div>' +
-        '<div class="ci-nombre">' + item.nombre + '</div>' +
-        '<div class="ci-detalle">' + item.detalle + '</div>' +
-        '<div style="margin-top:5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
-          precioHtml +
-          (item.cantidad > 1 ? '<span class="ci-subtotal">= ' + formatPrecioLocal(subtotal) + '</span>' : '') +
-        '</div>' +
-      '</div>' +
-      '<div class="ci-controles">' +
-        '<button class="ci-btn" onclick="cambiarCantidadMay(\'' + item.id + '\', -1)">−</button>' +
-        '<span class="ci-cant">' + item.cantidad + '</span>' +
-        '<button class="ci-btn" onclick="cambiarCantidadMay(\'' + item.id + '\', 1)">+</button>' +
-        '<button class="ci-btn eliminar" onclick="quitarDelCarritoMay(\'' + item.id + '\')">🗑</button>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-  actualizarTotalMay();
-  guardarCache('carritoMayorista', carritoMayorista);
-}
-
-function actualizarTotalMay() {
-  const total = carritoMayorista.reduce(function(s, c) { return s + (c.precioVenta || 0) * c.cantidad; }, 0);
-  const el    = document.getElementById('total-carrito-may');
-  if (el) el.textContent = formatPrecioLocal(total);
-}
-
-function inicializarBuscadorMay() {
-  const input      = document.getElementById('input-busqueda-may');
-  const resultados = document.getElementById('resultados-busqueda-may');
-  if (!input) return;
-  input.addEventListener('input', function() {
-    const q = input.value.trim();
-    if (q.length < 2) { resultados.style.display = 'none'; return; }
-    const encontrados = catalogoLocal
-      .filter(function(p) { return p._busqueda.includes(normalizar(q)); })
-      .filter(function(p) { return p.stock > 0; })
-      .slice(0, 15);
-    renderResultadosMay(encontrados);
-  });
-  document.addEventListener('click', function(e) {
-    const wrap = document.getElementById('wrap-busqueda-may');
-    if (wrap && !wrap.contains(e.target)) resultados.style.display = 'none';
-  });
-}
-
-function renderResultadosMay(items) {
-  const contenedor = document.getElementById('resultados-busqueda-may');
-  if (items.length === 0) {
-    contenedor.innerHTML = '<div style="padding:14px;text-align:center;color:#94a3b8;font-size:13px">Sin resultados</div>';
-    contenedor.style.display = 'block';
-    return;
-  }
-  contenedor.innerHTML = items.map(function(p) {
-    const sinStock  = (p.stock || 0) <= 0;
-    const precioStr = p.precioMay > 0 ? formatPrecioLocal(p.precioMay) : '<span style="color:#f97316;font-size:12px">Editable</span>';
-    return '<div class="resultado-item ' + (sinStock ? 'resultado-sin-stock' : '') + '"' +
-      (sinStock ? '' : ' onclick="agregarAlCarritoMayorista(\'' + p.id + '\')"') + '>' +
-      '<div>' +
-        '<div class="resultado-nombre"><span class="badge-tipo badge-bolsa">Bolsa</span> ' + p.nombre + '</div>' +
-        '<div class="resultado-detalle">' + p.detalle +
-          (sinStock ? ' · <span style="color:#ef4444;font-weight:600">Sin stock</span>' : ' · Stock: ' + p.stock) +
-        '</div>' +
-      '</div>' +
-      '<div class="resultado-precio">' + precioStr + '</div>' +
-    '</div>';
-  }).join('');
-  contenedor.style.display = 'block';
-}
-
-// -----------------------------------------------------------
-// CARRITO ACCESORIOS / FARMACIA
-// -----------------------------------------------------------
-function toggleCarritoAccesorios() {
-  const sec = document.getElementById('seccion-accesorios');
-  if (!sec) return;
-  const visible = sec.style.display !== 'none' && sec.style.display !== '';
-  sec.style.display = visible ? 'none' : 'block';
-}
-
-function inicializarBuscadorAcc() {
-  const input      = document.getElementById('input-busqueda-acc');
-  const resultados = document.getElementById('resultados-busqueda-acc');
-  if (!input) return;
-  input.addEventListener('input', function() {
-    const q = input.value.trim();
-    if (q.length < 2) { resultados.style.display = 'none'; return; }
-    const encontrados = catalogoAccesorios
-      .filter(function(p) { return p._busqueda.includes(normalizar(q)); })
-      .slice(0, 15);
-    renderResultadosAcc(encontrados);
-  });
-  document.addEventListener('click', function(e) {
-    const wrap = document.getElementById('wrap-busqueda-acc');
-    if (wrap && !wrap.contains(e.target)) resultados.style.display = 'none';
-  });
-}
-
-function renderResultadosAcc(items) {
-  const contenedor = document.getElementById('resultados-busqueda-acc');
-  if (items.length === 0) {
-    contenedor.innerHTML = '<div style="padding:14px;text-align:center;color:#94a3b8;font-size:13px">Sin resultados</div>';
-    contenedor.style.display = 'block';
-    return;
-  }
-  contenedor.innerHTML = items.map(function(p) {
-    const esFarm     = p.tipo === 'farmacia';
-    const badgeStyle = esFarm
-      ? 'background:#e0f2fe;color:#0369a1'
-      : 'background:#ede9fe;color:#6d28d9';
-    const badgeLabel = esFarm ? '💊 Farm' : '🧸 Acc';
-    const precioColor = esFarm ? '#0369a1' : '#6d28d9';
-    return '<div class="resultado-item" onclick="agregarAlCarritoAcc(\'' + p.id + '\')">' +
-      '<div>' +
-        '<div class="resultado-nombre">' +
-          '<span class="badge-tipo" style="' + badgeStyle + '">' + badgeLabel + '</span> ' + p.nombre +
-        '</div>' +
-        '<div class="resultado-detalle">' + p.detalle + ' · Stock: ' + p.stock + '</div>' +
-      '</div>' +
-      '<div class="resultado-precio" style="color:' + precioColor + '">' + formatPrecioLocal(p.precioVenta) + '</div>' +
-    '</div>';
-  }).join('');
-  contenedor.style.display = 'block';
-}
-
-function agregarAlCarritoAcc(productoId) {
-  const producto = catalogoAccesorios.find(function(p) { return p.id === productoId; });
-  if (!producto || producto.stock <= 0) return;
-  document.getElementById('resultados-busqueda-acc').style.display = 'none';
-  document.getElementById('input-busqueda-acc').value = '';
-  const existente = carritoAccesorios.find(function(c) { return c.id === productoId; });
-  if (existente) {
-    if (existente.cantidad < producto.stock) existente.cantidad++;
-    else { mostrarToast('No hay mas stock'); return; }
-  } else {
-    carritoAccesorios.push(Object.assign({}, producto, { cantidad: 1 }));
-  }
-  renderCarritoAcc();
-}
-
-function cambiarCantidadAcc(productoId, delta) {
-  const item     = carritoAccesorios.find(function(c) { return c.id === productoId; });
-  if (!item) return;
-  const maxStock = (catalogoAccesorios.find(function(p) { return p.id === productoId; }) || {}).stock || 9999;
-  item.cantidad  = Math.max(0, Math.min(item.cantidad + delta, maxStock));
-  if (item.cantidad === 0) carritoAccesorios = carritoAccesorios.filter(function(c) { return c.id !== productoId; });
-  renderCarritoAcc();
-}
-
-function quitarDelCarritoAcc(productoId) {
-  carritoAccesorios = carritoAccesorios.filter(function(c) { return c.id !== productoId; });
-  renderCarritoAcc();
-}
-
-function actualizarPrecioAcc(productoId, valor) {
-  const item = carritoAccesorios.find(function(c) { return c.id === productoId; });
-  if (item) item.precioVenta = parseFloat(valor) || 0;
-  actualizarTotalAcc();
-}
-
-function vaciarCarritoAcc() {
-  carritoAccesorios = [];
-  renderCarritoAcc();
-}
-
-function renderCarritoAcc() {
-  const lista   = document.getElementById('carrito-lista-acc');
-  const count   = document.getElementById('carrito-count-acc');
-  const btnConf = document.getElementById('btn-confirmar-acc');
-  if (!lista) return;
-  if (carritoAccesorios.length === 0) {
-    lista.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">Carrito de accesorios vacío</div>';
-    if (count) count.textContent = '';
-    const totalEl = document.getElementById('total-carrito-acc');
-    if (totalEl) totalEl.textContent = '$0';
-    if (btnConf) btnConf.disabled = true;
-    return;
-  }
-  if (count) count.textContent = '(' + carritoAccesorios.length + ')';
-  if (btnConf) btnConf.disabled = false;
-  lista.innerHTML = carritoAccesorios.map(function(item) {
-    const subtotal    = (item.precioVenta || 0) * item.cantidad;
-    const esFarm      = item.tipo === 'farmacia';
-    const borderColor = esFarm ? '#0ea5e9' : '#7c3aed';
-    const bgColor     = esFarm ? '#f0f9ff' : '#f5f3ff';
-    const textColor   = esFarm ? '#0369a1' : '#5b21b6';
-    const precioHtml  = '<input type="number" min="0" value="' + (item.precioVenta || '') + '" placeholder="$ precio"' +
-      ' onchange="actualizarPrecioAcc(\'' + item.id + '\', this.value)"' +
-      ' style="width:110px;padding:5px 10px;background:' + bgColor + ';border:2px solid ' + borderColor + ';border-radius:8px;font-size:14px;font-weight:800;color:' + textColor + '">';
-    return '<div class="carrito-item">' +
-      '<div>' +
-        '<div class="ci-nombre">' + item.nombre + '</div>' +
-        '<div class="ci-detalle">' + item.detalle + '</div>' +
-        '<div style="margin-top:5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
-          precioHtml +
-          (item.cantidad > 1 ? '<span class="ci-subtotal">= ' + formatPrecioLocal(subtotal) + '</span>' : '') +
-        '</div>' +
-      '</div>' +
-      '<div class="ci-controles">' +
-        '<button class="ci-btn" onclick="cambiarCantidadAcc(\'' + item.id + '\', -1)">−</button>' +
-        '<span class="ci-cant">' + item.cantidad + '</span>' +
-        '<button class="ci-btn" onclick="cambiarCantidadAcc(\'' + item.id + '\', 1)">+</button>' +
-        '<button class="ci-btn eliminar" onclick="quitarDelCarritoAcc(\'' + item.id + '\')">🗑</button>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-  actualizarTotalAcc();
-}
-
-function actualizarTotalAcc() {
-  const total = carritoAccesorios.reduce(function(s, c) { return s + (c.precioVenta || 0) * c.cantidad; }, 0);
-  const el    = document.getElementById('total-carrito-acc');
-  if (el) el.textContent = formatPrecioLocal(total);
-}
-
-// -----------------------------------------------------------
-// CONFIRMAR VENTA ACCESORIOS / FARMACIA
-// -----------------------------------------------------------
-async function confirmarVentaAcc() {
-  if (carritoAccesorios.length === 0) return;
-  const sinPrecio = carritoAccesorios.filter(function(c) { return !c.precioVenta || c.precioVenta <= 0; });
-  if (sinPrecio.length > 0) {
-    mostrarToast('Ingresa el precio de: ' + sinPrecio.map(function(p) { return p.nombre; }).join(', '));
-    return;
-  }
-  const btn = document.getElementById('btn-confirmar-acc');
-  if (btn) { btn.disabled = true; btn.textContent = 'Procesando...'; }
-  try {
-    const batch = db.batch();
-    carritoAccesorios.forEach(function(item) {
-      // Descontar stock segun tipo (variante o simple)
-      if (item.esVariante) {
-        const varRef = db.collection('accesorios').doc(item.padreId).collection('variantes').doc(item.id);
-        batch.update(varRef, { stock: firebase.firestore.FieldValue.increment(-item.cantidad) });
-      } else {
-        const accRef = db.collection('accesorios').doc(item.id);
-        batch.update(accRef, { stock: firebase.firestore.FieldValue.increment(-item.cantidad) });
-      }
-      // Guardar venta en coleccion ventas
-      const costoFIFO = (item.costo || 0) * item.cantidad;
-      const ganancia  = (item.precioVenta * item.cantidad) - costoFIFO;
-      const vRef      = db.collection('ventas').doc();
-      batch.set(vRef, {
-        fecha:          firebase.firestore.FieldValue.serverTimestamp(),
-        tipo:           item.tipo,
-        nombreProducto: item.nombre,
-        cantidad:       item.cantidad,
-        precioVenta:    item.precioVenta,
-        totalVenta:     item.precioVenta * item.cantidad,
-        costoFIFO:      costoFIFO,
-        ganancia:       ganancia,
-        origen:         'carrito_acc',
-        productoId:     item.esVariante ? (item.padreId + '/variantes/' + item.id) : item.id
-      });
-    });
-    await batch.commit();
-    // Actualizar stock local
-    carritoAccesorios.forEach(function(item) {
-      const enCat = catalogoAccesorios.find(function(p) { return p.id === item.id; });
-      if (enCat) enCat.stock -= item.cantidad;
-    });
-    const gananciaTotal = carritoAccesorios.reduce(function(s, item) {
-      return s + ((item.precioVenta * item.cantidad) - ((item.costo || 0) * item.cantidad));
-    }, 0);
-    mostrarToast('Venta confirmada — Ganancia: ' + formatPrecioLocal(gananciaTotal));
-    carritoAccesorios = [];
-    renderCarritoAcc();
-  } catch (err) {
-    console.error('Error al confirmar venta acc:', err);
-    mostrarToast('Error al procesar. Intenta de nuevo.');
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '✓ Confirmar venta'; }
-  }
-}
-
-// -----------------------------------------------------------
-// CONFIRMAR VENTA MINORISTA
-// -----------------------------------------------------------
-async function confirmarVenta() {
+async function confirmarVentaUnica() {
+  const carrito = carritoActivo();
   if (carrito.length === 0) return;
+
   const sinPrecio = carrito.filter(function(c) { return !c.precioVenta || c.precioVenta <= 0; });
   if (sinPrecio.length > 0) {
     mostrarToast('Ingresa el precio de: ' + sinPrecio.map(function(p) { return p.nombre; }).join(', '));
     return;
   }
-  await _procesarVenta(carrito, 'minorista');
-  carrito = [];
-  renderCarrito();
-  localStorage.removeItem('carritoMinorista');
-}
 
-// -----------------------------------------------------------
-// CONFIRMAR VENTA MAYORISTA
-// -----------------------------------------------------------
-async function confirmarVentaMayorista() {
-  if (carritoMayorista.length === 0) return;
-  const sinPrecio = carritoMayorista.filter(function(c) { return !c.precioVenta || c.precioVenta <= 0; });
-  if (sinPrecio.length > 0) {
-    mostrarToast('Ingresa el precio de: ' + sinPrecio.map(function(p) { return p.nombre; }).join(', '));
-    return;
-  }
-  await _procesarVenta(carritoMayorista, 'mayorista');
-  carritoMayorista = [];
-  renderCarritoMayorista();
-  localStorage.removeItem('carritoMayorista');
-}
-
-// Motor FIFO compartido para bolsas
-async function _procesarVenta(items, tipoVenta) {
-  const btnId = tipoVenta === 'mayorista' ? 'btn-confirmar-may' : 'btn-confirmar';
-  const btn   = document.getElementById(btnId);
+  const btn = document.getElementById('btn-confirmar');
   if (btn) { btn.disabled = true; btn.textContent = 'Procesando...'; }
+
   try {
+    const itemsBolsa = carrito.filter(function(c) { return c.tipo === 'bolsa'; });
+    const itemsAcc   = carrito.filter(function(c) { return c.tipo !== 'bolsa'; });
+
+    // ---- 1) RE-CHEQUEO FRESCO DE STOCK CONTRA FIRESTORE ----
+
+    // 1a) Bolsas: FIFO de lotes (igual lógica que la v15 real)
     const datosBolsas = [];
-    for (const item of items) {
-      if (item.tipo !== 'bolsa') continue;
+    for (const item of itemsBolsa) {
       const productoRef = db.collection('productos').doc(item.id);
       const lotesSnap   = await productoRef.collection('lotes').orderBy('fechaCompra', 'asc').get();
       const lotes = lotesSnap.docs
@@ -675,13 +424,37 @@ async function _procesarVenta(items, tipoVenta) {
         .filter(function(l) { return l.cantidadRestante > 0; });
       const stockEnLotes = lotes.reduce(function(s, l) { return s + l.cantidadRestante; }, 0);
       if (stockEnLotes < item.cantidad) {
-        mostrarToast('Stock insuficiente en lotes para: ' + item.nombre);
-        if (btn) { btn.disabled = false; btn.textContent = tipoVenta === 'mayorista' ? 'Confirmar venta mayorista' : 'Confirmar venta'; }
+        mostrarToast('Stock insuficiente para: ' + item.nombre);
+        if (btn) { btn.disabled = false; btn.textContent = '✓ Confirmar venta'; }
         return;
       }
       datosBolsas.push({ item, productoRef, lotes });
     }
-    const operaciones = datosBolsas.map(function(dato) {
+
+    // 1b) Accesorios/farmacia: leer stock actual fresco (variante o doc simple)
+    const datosAcc = [];
+    for (const item of itemsAcc) {
+      let stockFresco = 0;
+      let ref;
+      if (item.esVariante) {
+        ref = db.collection('accesorios').doc(item.padreId).collection('variantes').doc(item.id);
+        const snap = await ref.get();
+        stockFresco = snap.exists ? (snap.data().stock || 0) : 0;
+      } else {
+        ref = db.collection('accesorios').doc(item.id);
+        const snap = await ref.get();
+        stockFresco = snap.exists ? (snap.data().stock || 0) : 0;
+      }
+      if (stockFresco < item.cantidad) {
+        mostrarToast('Stock insuficiente para: ' + item.nombre);
+        if (btn) { btn.disabled = false; btn.textContent = '✓ Confirmar venta'; }
+        return;
+      }
+      datosAcc.push({ item, ref });
+    }
+
+    // ---- 2) PREPARAR OPERACIONES FIFO (bolsas) ----
+    const operacionesBolsa = datosBolsas.map(function(dato) {
       var restante    = dato.item.cantidad;
       var costoFIFO   = 0;
       var loteUpdates = [];
@@ -701,86 +474,142 @@ async function _procesarVenta(items, tipoVenta) {
         ganancia:    (dato.item.precioVenta * dato.item.cantidad) - costoFIFO
       };
     });
+
+    // ---- 3) ARMAR UN SOLO BATCH ----
     const batch = db.batch();
-    for (const op of operaciones) {
+
+    operacionesBolsa.forEach(function(op) {
       op.loteUpdates.forEach(function(lu) {
         batch.update(lu.ref, { cantidadRestante: lu.nuevaCantidad });
       });
       batch.update(op.productoRef, {
         stockTotal: firebase.firestore.FieldValue.increment(-op.item.cantidad)
       });
-    }
-    const gananciaTotal = operaciones.reduce(function(s, op) { return s + op.ganancia; }, 0);
-    items.forEach(function(item) {
-      const op   = operaciones.find(function(o) { return o.item.id === item.id; });
       const vRef = db.collection('ventas').doc();
       batch.set(vRef, {
         fecha:          firebase.firestore.FieldValue.serverTimestamp(),
-        tipo:           tipoVenta,
-        nombreProducto: item.nombre,
-        cantidad:       item.cantidad,
-        precioVenta:    item.precioVenta,
-        totalVenta:     item.precioVenta * item.cantidad,
-        costoFIFO:      op ? op.costoFIFO : 0,
-        ganancia:       op ? op.ganancia : 0,
+        tipo:           modoVenta,
+        nombreProducto: op.item.nombre,
+        cantidad:       op.item.cantidad,
+        precioVenta:    op.item.precioVenta,
+        totalVenta:     op.totalVenta,
+        costoFIFO:      op.costoFIFO,
+        ganancia:       op.ganancia,
         origen:         'vender',
-        productoId:     item.id
+        productoId:     op.item.id
       });
     });
+
+    const operacionesAcc = datosAcc.map(function(dato) {
+      const costoFIFO = (dato.item.costo || 0) * dato.item.cantidad;
+      const ganancia  = (dato.item.precioVenta * dato.item.cantidad) - costoFIFO;
+      return { item: dato.item, ref: dato.ref, costoFIFO, ganancia };
+    });
+
+    operacionesAcc.forEach(function(op) {
+      batch.update(op.ref, { stock: firebase.firestore.FieldValue.increment(-op.item.cantidad) });
+      const vRef = db.collection('ventas').doc();
+      batch.set(vRef, {
+        fecha:          firebase.firestore.FieldValue.serverTimestamp(),
+        tipo:           op.item.tipo,
+        nombreProducto: op.item.nombre,
+        cantidad:       op.item.cantidad,
+        precioVenta:    op.item.precioVenta,
+        totalVenta:     op.item.precioVenta * op.item.cantidad,
+        costoFIFO:      op.costoFIFO,
+        ganancia:       op.ganancia,
+        origen:         'carrito_acc',
+        productoId:     op.item.esVariante ? (op.item.padreId + '/variantes/' + op.item.id) : op.item.id
+      });
+    });
+
+    // ---- 4) COMMIT ÚNICO ----
     await batch.commit();
-    operaciones.forEach(function(op) {
+
+    // ---- 5) Actualizar stock local en memoria ----
+    operacionesBolsa.forEach(function(op) {
       const enCatalogo = catalogoLocal.find(function(p) { return p.id === op.item.id; });
       if (enCatalogo) enCatalogo.stock -= op.item.cantidad;
     });
-    mostrarToast('Venta ' + tipoVenta + ' confirmada — Ganancia: ' + formatPrecioLocal(gananciaTotal));
+    operacionesAcc.forEach(function(op) {
+      const enCatalogo = catalogoAccesorios.find(function(p) {
+        return p.id === op.item.id && (p.padreId || null) === (op.item.padreId || null);
+      });
+      if (enCatalogo) enCatalogo.stock -= op.item.cantidad;
+    });
+
+    const gananciaTotal =
+      operacionesBolsa.reduce(function(s, op) { return s + op.ganancia; }, 0) +
+      operacionesAcc.reduce(function(s, op) { return s + op.ganancia; }, 0);
+
+    mostrarToast('Venta ' + modoVenta + ' confirmada — Ganancia: ' + formatPrecioLocal(gananciaTotal));
+
+    setCarritoActivo([]);
+    renderCarritoUnico();
   } catch (err) {
     console.error('Error al confirmar venta:', err);
     mostrarToast('Error al procesar la venta. Intenta de nuevo.');
   } finally {
-    if (btn) {
-      btn.disabled    = false;
-      btn.textContent = tipoVenta === 'mayorista' ? 'Confirmar venta mayorista' : 'Confirmar venta';
+    if (btn) { btn.disabled = false; btn.textContent = '✓ Confirmar venta'; }
+  }
+}
+
+// -----------------------------------------------------------
+// CACHE localStorage (carritos separados por modo)
+// -----------------------------------------------------------
+const CACHE_KEY_MINORISTA = 'carritoMinoristaUnico';
+const CACHE_KEY_MAYORISTA = 'carritoMayoristaUnico';
+
+function serializarCarrito(datos) {
+  return datos.map(function(item) {
+    return {
+      id:             item.id,
+      padreId:        item.padreId || null,
+      esVariante:     !!item.esVariante,
+      nombre:         item.nombre,
+      detalle:        item.detalle,
+      tipo:           item.tipo,
+      stock:          item.stock,
+      precioVenta:    item.precioVenta,
+      precioMay:      item.precioMay,
+      costo:          item.costo,
+      precioEditable: true,
+      cantidad:       item.cantidad,
+      _busqueda:      item._busqueda
+    };
+  });
+}
+
+function guardarCache() {
+  try {
+    localStorage.setItem(CACHE_KEY_MINORISTA, JSON.stringify(serializarCarrito(carritoMinorista)));
+    localStorage.setItem(CACHE_KEY_MAYORISTA, JSON.stringify(serializarCarrito(carritoMayorista)));
+  } catch (e) {}
+}
+
+function restaurarCarritoDesdeCache() {
+  try {
+    const rawMin = localStorage.getItem(CACHE_KEY_MINORISTA);
+    if (rawMin) {
+      const itemsMin = JSON.parse(rawMin);
+      if (Array.isArray(itemsMin)) carritoMinorista = itemsMin;
     }
+  } catch (e) {
+    localStorage.removeItem(CACHE_KEY_MINORISTA);
+  }
+  try {
+    const rawMay = localStorage.getItem(CACHE_KEY_MAYORISTA);
+    if (rawMay) {
+      const itemsMay = JSON.parse(rawMay);
+      if (Array.isArray(itemsMay)) carritoMayorista = itemsMay;
+    }
+  } catch (e) {
+    localStorage.removeItem(CACHE_KEY_MAYORISTA);
   }
 }
 
 // -----------------------------------------------------------
-// CACHE localStorage
-// -----------------------------------------------------------
-function guardarCache(clave, datos) {
-  try {
-    localStorage.setItem(clave, JSON.stringify(datos.map(function(item) {
-      return {
-        id:             item.id,
-        nombre:         item.nombre,
-        detalle:        item.detalle,
-        tipo:           item.tipo,
-        stock:          item.stock,
-        precioVenta:    item.precioVenta,
-        precioMay:      item.precioMay,
-        precioEditable: true,
-        cantidad:       item.cantidad,
-        _busqueda:      item._busqueda
-      };
-    })));
-  } catch(e) {}
-}
-
-function restaurarCarritoDesdeCache(clave, destino, renderFn) {
-  try {
-    const raw = localStorage.getItem(clave);
-    if (!raw) return;
-    const items = JSON.parse(raw);
-    if (!Array.isArray(items) || items.length === 0) return;
-    items.forEach(function(item) { destino.push(item); });
-    renderFn();
-  } catch(e) {
-    localStorage.removeItem(clave);
-  }
-}
-
-// -----------------------------------------------------------
-// CIERRE DIARIO PET SHOP
+// CIERRE DIARIO PET SHOP (sin cambios de comportamiento vs v15)
 // -----------------------------------------------------------
 function toggleCierre() {
   const body    = document.getElementById('cierre-body');
@@ -882,7 +711,7 @@ async function eliminarCierrePetShop(docId) {
 }
 
 // -----------------------------------------------------------
-// UTILIDADES
+// UTILIDADES (sin cambios de comportamiento vs v15)
 // -----------------------------------------------------------
 function normalizar(str) {
   if (!str) return '';
@@ -905,24 +734,17 @@ function mostrarToast(msg) {
 // -----------------------------------------------------------
 // INICIALIZACION
 // -----------------------------------------------------------
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', function() {
-    inicializarBuscador();
-    inicializarBuscadorMay();
-    inicializarBuscadorAcc();
-    renderCarrito();
-    renderCarritoMayorista();
-    renderCarritoAcc();
-    cargarCatalogo();
-    cargarAccesorios();
-  });
-} else {
+async function inicializarVender() {
   inicializarBuscador();
-  inicializarBuscadorMay();
-  inicializarBuscadorAcc();
-  renderCarrito();
-  renderCarritoMayorista();
-  renderCarritoAcc();
-  cargarCatalogo();
-  cargarAccesorios();
+  restaurarCarritoDesdeCache();
+  renderCarritoUnico();
+  await Promise.all([cargarCatalogo(), cargarAccesorios()]);
+  // Tras cargar catálogos, re-renderizar para reflejar stock real
+  renderCarritoUnico();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', inicializarVender);
+} else {
+  inicializarVender();
 }
